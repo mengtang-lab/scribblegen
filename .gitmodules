@@ -1,0 +1,6 @@
+[submodule "ControlNet"]
+	path = ControlNet
+	url = https://github.com/lllyasviel/ControlNet
+[submodule "ADE20K"]
+	path = ADE20K
+	url = https://github.com/CSAILVision/ADE20K
