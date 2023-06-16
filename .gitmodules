@@ -1,6 +1,3 @@
 [submodule "ControlNet"]
 	path = ControlNet
 	url = https://github.com/mengtang-lab/ControlNet
-[submodule "ADE20K"]
-	path = ADE20K
-	url = https://github.com/mengtang-lab/ADE20K

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from torch.utils.data import Dataset, DataLoader
-from ADE20K.utils.utils_ade20k import loadAde20K
+from utils import loadAde20K
 from config import DatasetEnum, ExpConfig
 
 class ADE20KDataset(Dataset):
