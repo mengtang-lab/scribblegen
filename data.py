@@ -1,0 +1,118 @@
+from typing import Tuple, Dict
+
+import cv2
+import pickle as pkl
+import numpy as np
+import torch
+
+from torch.utils.data import Dataset, DataLoader
+from ADE20K.utils.utils_ade20k import loadAde20K
+from config import DatasetEnum, ExpConfig
+
+class ADE20KDataset(Dataset):
+    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True):
+        self.DATASET_PATH = '/mnt/ADE20K'
+        index_file = 'ADE20K_2021_17_01/index_ade20k.pkl'
+        with open('{}/{}'.format(self.DATASET_PATH, index_file), 'rb') as f:
+            self.index_ade20k = pkl.load(f)
+        split = 'train' if train else 'val'
+        self.indices = [
+            i for i in range(len(self.index_ade20k['filename'])) 
+            if split in self.index_ade20k['filename'][i]
+        ]
+        
+        self.size = size
+        self.default_prompt = "a high-quality, detailed, and professional image"
+
+    def __len__(self) -> int:
+        return len(self.indices)
+
+    def __getitem__(self, idx: int) -> Dict:
+        # Make idx go from index in the current dataset (i.e. restricted to train or val) to the
+        #   true index in the total dataset of ADE20K.
+        idx = self.indices[idx]
+
+        full_file_name = '{}/{}'.format(self.index_ade20k['folder'][idx], self.index_ade20k['filename'][idx])
+        info = loadAde20K('{}/{}'.format(self.DATASET_PATH, full_file_name))
+        target = cv2.imread(info['img_name'])[:,:,::-1]
+        source = cv2.imread(info['segm_name'])[:,:,::-1]
+
+        # Do not forget that OpenCV read images in BGR order.
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
+        # Resize
+        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+        target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        # Normalize target images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
+
+        return dict(jpg=target, txt=self.default_prompt, hint=source)
+
+
+class PascalDataset(Dataset):
+    def __init__(self, size: Tuple[int, int] = (512, 512)):
+        self.DATASET_PATH = '/mnt/PascalVOC/VOC2012'
+        
+        self.image_names = list(map(lambda x: x.split('.png')[0], os.listdir(f"{self.DATASET_PATH}/SegmentationClass")))
+        self.size = size
+        self.default_prompt = "a high-quality, detailed, and professional image"
+
+    def __len__(self) -> int:
+        return len(self.image_names)
+
+    def __getitem__(self, idx: int) -> Dict:
+        file_name = self.image_names[idx]
+        target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpg"
+        source_path = f"{self.DATASET_PATH}/SegmentationClass/{file_name}.png"
+
+        target = cv2.imread(target_path)[:,:,::-1]
+        source = cv2.imread(source_path)[:,:,::-1]
+
+        # Do not forget that OpenCV read images in BGR order.
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
+        # Resize
+        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+        target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        # Normalize target images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
+
+        return dict(jpg=target, txt=self.default_prompt, hint=source)
+
+
+def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
+    train_ds: Dataset
+    val_ds: Dataset
+    if config.dataset.value == DatasetEnum.ADE20K.value:
+        train_ds = ADE20KDataset(train=True)
+        val_ds = ADE20KDataset(train=False)
+        assert len(train_ds) + len(val_ds) == 27258
+
+    elif config.dataset.value == DatasetEnum.ADE20K.value:
+        dataset = PascalDataset()
+        train_size = int(len(dataset) * 0.8)
+        val_size = len(dataset) - train_size
+        generator = torch.Generator().manual_seed(42)
+        train_ds, val_ds = torch.utils.data.random_split(dataset, [train_size, val_size], generator=generator)
+        assert len(train_ds) + len(val_ds) == 2913
+
+    else:
+        raise NotImplementedError
+    
+    print(f"Train dataset has {len(train_ds)} images")
+    print(f"Val dataset has {len(val_ds)} images")
+    train_dataloader = DataLoader(train_ds, num_workers=config.num_workers, 
+                                  batch_size=config.batch_size, shuffle=True)
+    val_dataloader = DataLoader(val_ds, num_workers=config.num_workers, 
+                                batch_size=config.batch_size, shuffle=False)
+    return train_dataloader, val_dataloader

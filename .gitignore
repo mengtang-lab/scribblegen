@@ -1,3 +1,6 @@
 data/
 logs/
 runs/
+.ipynb_checkpoints/
+outputs/
+__pycache__/
