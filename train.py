@@ -5,7 +5,6 @@ from hydra.core.config_store import ConfigStore
 
 from config import ExpConfig
 from data import get_dataloaders
-from utils import file_path
 
 import sys
 sys.path.append('./ControlNet') # to let ControlNet imports work
