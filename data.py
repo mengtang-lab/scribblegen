@@ -54,11 +54,13 @@ class ADE20KDataset(Dataset):
         return dict(jpg=target, txt=self.default_prompt, hint=source)
 
 
-class PascalDataset(Dataset):
-    def __init__(self, size: Tuple[int, int] = (512, 512)):
-        self.DATASET_PATH = '/mnt/PascalVOC/VOC2012'
+class PascalSegmentationDataset(Dataset):
+    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True):
+        self.DATASET_PATH = '/mnt/PascalVOC'
         
-        self.image_names = list(map(lambda x: x.split('.png')[0], os.listdir(f"{self.DATASET_PATH}/SegmentationClass")))
+        with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
+            self.image_names = f.readlines()
+        self.image_names = list(map(lambda n: n[:-1], self.image_names))
         self.size = size
         self.default_prompt = "a high-quality, detailed, and professional image"
 
@@ -68,7 +70,7 @@ class PascalDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict:
         file_name = self.image_names[idx]
         target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpg"
-        source_path = f"{self.DATASET_PATH}/SegmentationClass/{file_name}.png"
+        source_path = f"{self.DATASET_PATH}/SegmentationClassAug/{file_name}.png"
 
         target = cv2.imread(target_path)[:,:,::-1]
         source = cv2.imread(source_path)[:,:,::-1]
@@ -94,17 +96,14 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
     train_ds: Dataset
     val_ds: Dataset
     if config.dataset.value == DatasetEnum.ADE20K.value:
-        train_ds = ADE20KDataset(train=True)
-        val_ds = ADE20KDataset(train=False)
+        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True)
+        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False)
         assert len(train_ds) + len(val_ds) == 27258
 
-    elif config.dataset.value == DatasetEnum.ADE20K.value:
-        dataset = PascalDataset()
-        train_size = int(len(dataset) * 0.8)
-        val_size = len(dataset) - train_size
-        generator = torch.Generator().manual_seed(42)
-        train_ds, val_ds = torch.utils.data.random_split(dataset, [train_size, val_size], generator=generator)
-        assert len(train_ds) + len(val_ds) == 2913
+    elif config.dataset.value == DatasetEnum.PascalSegmentation.value:
+        train_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=True)
+        val_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=False)
+        assert len(train_ds) + len(val_ds) == 12031
 
     else:
         raise NotImplementedError
