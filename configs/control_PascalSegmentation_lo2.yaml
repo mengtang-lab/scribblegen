@@ -1,0 +1,12 @@
+defaults:
+  - base
+  - _self_
+
+max_epochs: 20
+batch_size: 4
+learning_rate: 1e-8
+dataset: PascalSegmentation
+
+gpus: [0]
+log_dir: ./logs/PascalSegmentation
+logger_freq: 200

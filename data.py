@@ -10,7 +10,7 @@ from utils import loadAde20K
 from config import DatasetEnum, ExpConfig
 
 class ADE20KDataset(Dataset):
-    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True):
+    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False):
         self.DATASET_PATH = '/mnt/ADE20K'
         index_file = 'ADE20K_2021_17_01/index_ade20k.pkl'
         with open('{}/{}'.format(self.DATASET_PATH, index_file), 'rb') as f:
@@ -20,6 +20,8 @@ class ADE20KDataset(Dataset):
             i for i in range(len(self.index_ade20k['filename'])) 
             if split in self.index_ade20k['filename'][i]
         ]
+        if overfit:
+            self.indices = self.indices[:10]
         
         self.size = size
         self.default_prompt = "a high-quality, detailed, and professional image"
@@ -55,7 +57,7 @@ class ADE20KDataset(Dataset):
 
 
 class PascalSegmentationDataset(Dataset):
-    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True):
+    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False):
         self.DATASET_PATH = '/mnt/PascalVOC'
         
         with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
@@ -63,6 +65,8 @@ class PascalSegmentationDataset(Dataset):
         self.image_names = list(map(lambda n: n[:-1], self.image_names))
         self.size = size
         self.default_prompt = "a high-quality, detailed, and professional image"
+        if overfit:
+            self.image_names = self.image_names[:10]
 
     def __len__(self) -> int:
         return len(self.image_names)
@@ -96,14 +100,14 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
     train_ds: Dataset
     val_ds: Dataset
     if config.dataset.value == DatasetEnum.ADE20K.value:
-        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True)
-        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False)
-        assert len(train_ds) + len(val_ds) == 27258
+        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
+        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit)
+        assert len(train_ds) + len(val_ds) == 27258 or config.overfit
 
     elif config.dataset.value == DatasetEnum.PascalSegmentation.value:
-        train_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=True)
-        val_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=False)
-        assert len(train_ds) + len(val_ds) == 12031
+        train_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
+        val_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=False, overfit=config.overfit)
+        assert len(train_ds) + len(val_ds) == 12031 or config.overfit
 
     else:
         raise NotImplementedError

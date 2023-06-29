@@ -20,6 +20,7 @@ class ExpConfig:
 
     accumulate_grad_batches: int = 1
     image_size: Tuple[int, int] = (512, 512)
+    overfit: bool = False
     num_workers: int = 4
     
     sd_locked: bool = True  # whether to train bottom half of SD model

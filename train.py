@@ -7,6 +7,7 @@ from config import ExpConfig
 from data import get_dataloaders
 
 import sys
+import os
 sys.path.append('./ControlNet') # to let ControlNet imports work
 from ControlNet.cldm.logger import ImageLogger
 from ControlNet.cldm.model import create_model, load_state_dict
@@ -43,6 +44,9 @@ def main(config: ExpConfig):
         strategy='ddp',
         devices=config.gpus, 
     )
+
+    os.makedirs(trainer.logger.log_dir, exist_ok=True)
+    OmegaConf.save(config, f"{trainer.logger.log_dir}/config.yaml")
 
     # Train!
     trainer.fit(model, train_dataloader, val_dataloader, ckpt_path=config.resume_path)
