@@ -4,3 +4,5 @@ runs/
 .ipynb_checkpoints/
 outputs/
 __pycache__/
+*.log
+temp*

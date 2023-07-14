@@ -3,7 +3,6 @@ from typing import Tuple, Dict
 import cv2
 import pickle as pkl
 import numpy as np
-import torch
 
 from torch.utils.data import Dataset, DataLoader
 from utils import loadAde20K
@@ -57,11 +56,17 @@ class ADE20KDataset(Dataset):
 
 
 class PascalSegmentationDataset(Dataset):
-    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False):
+    def __init__(
+            self, 
+            size: Tuple[int, int] = (512, 512), # Input image size
+            train: bool = True, # Whether to use training split or not
+            overfit: bool = False, # Whether to limit the dataset to 10 images
+        ):
         self.DATASET_PATH = '/mnt/PascalVOC'
         
         with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
             self.image_names = f.readlines()
+        # Remove new line character
         self.image_names = list(map(lambda n: n[:-1], self.image_names))
         self.size = size
         self.default_prompt = "a high-quality, detailed, and professional image"
@@ -93,7 +98,7 @@ class PascalSegmentationDataset(Dataset):
         # Normalize target images to [-1, 1].
         target = (target.astype(np.float32) / 127.5) - 1.0
 
-        return dict(jpg=target, txt=self.default_prompt, hint=source)
+        return dict(jpg=target, txt=self.default_prompt, hint=source, name=file_name)
 
 
 def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:

@@ -1,0 +1,20 @@
+max_epochs: 200
+batch_size: 32
+learning_rate: 0.0001
+dataset: PascalSegmentation
+gpus:
+- 1
+- 2
+log_dir: ./logs/PascalSegmentation
+accumulate_grad_batches: 1
+image_size:
+- 512
+- 512
+overfit: false
+num_workers: 8
+sd_locked: true
+only_mid_control: false
+model_path: ./ControlNet/models/control_sd15_ini.ckpt
+model_config_path: ./ControlNet/models/cldm_v15.yaml
+resume_path: null
+logger_freq: 200

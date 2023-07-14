@@ -2,11 +2,11 @@ defaults:
   - base
   - _self_
 
-max_epochs: 100
+max_epochs: 200
 batch_size: 16
-learning_rate: 1e-6
+learning_rate: 1e-4
 dataset: PascalSegmentation
 
-gpus: [2]
+gpus: [1]
 log_dir: ./logs/PascalSegmentation
 logger_freq: 200

@@ -1,0 +1,11 @@
+defaults:
+  - base
+  - _self_
+
+max_epochs: 50
+batch_size: 16
+learning_rate: 1e-4
+dataset: ADE20K
+
+gpus: [0]
+log_dir: ./logs/ADE20K
