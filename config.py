@@ -6,7 +6,7 @@ from omegaconf import OmegaConf, MISSING
 class DatasetEnum(Enum):
     ADE20K = 0
     PascalSegmentation = 1
-    PascalScribbles = 2
+    PascalScribble = 2
 
 @dataclass
 class ExpConfig:
@@ -20,6 +20,7 @@ class ExpConfig:
 
     accumulate_grad_batches: int = 1
     image_size: Tuple[int, int] = (512, 512)
+    class_hint: bool = False  # whether to include class names in the prompt, currently only for pascal scribbles
     overfit: bool = False
     num_workers: int = 4
     

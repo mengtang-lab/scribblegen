@@ -3,6 +3,7 @@ from typing import Tuple, Dict
 import cv2
 import pickle as pkl
 import numpy as np
+import json
 
 from torch.utils.data import Dataset, DataLoader
 from utils import loadAde20K
@@ -61,13 +62,23 @@ class PascalSegmentationDataset(Dataset):
             size: Tuple[int, int] = (512, 512), # Input image size
             train: bool = True, # Whether to use training split or not
             overfit: bool = False, # Whether to limit the dataset to 10 images
+            class_hint: bool = False, # Whether to include class names in the CLIP prompt
         ):
-        self.DATASET_PATH = '/mnt/PascalVOC'
+        self.DATASET_PATH = '/mnt/data1/PascalVOC'
         
         with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
             self.image_names = f.readlines()
         # Remove new line character
         self.image_names = list(map(lambda n: n[:-1], self.image_names))
+
+        # Get present classes
+        self.class_hint = class_hint
+        if class_hint:
+            with open(f"{self.DATASET_PATH}/classes.json", 'r') as f:
+                self.classes = json.load(f)
+        else:
+            self.classes = None
+
         self.size = size
         self.default_prompt = "a high-quality, detailed, and professional image"
         if overfit:
@@ -98,7 +109,71 @@ class PascalSegmentationDataset(Dataset):
         # Normalize target images to [-1, 1].
         target = (target.astype(np.float32) / 127.5) - 1.0
 
-        return dict(jpg=target, txt=self.default_prompt, hint=source, name=file_name)
+        prompt = self.default_prompt
+        if self.class_hint:
+            prompt = prompt + " of " + ', '.join(self.classes[file_name])
+
+        return dict(jpg=target, txt=prompt, hint=source, name=file_name)
+    
+
+class PascalScribbleDataset(Dataset):
+    def __init__(
+            self, 
+            size: Tuple[int, int] = (512, 512), # Input image size
+            train: bool = True, # Whether to use training split or not
+            overfit: bool = False, # Whether to limit the dataset to 10 images
+            class_hint: bool = False, # Whether to include class names in the CLIP prompt
+        ):
+        self.DATASET_PATH = '/mnt/data1/PascalVOC'
+        
+        with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
+            self.image_names = f.readlines()
+        # Remove new line character
+        self.image_names = list(map(lambda n: n[:-1], self.image_names))
+
+        # Get present classes
+        self.class_hint = class_hint
+        if class_hint:
+            with open(f"{self.DATASET_PATH}/classes.json", 'r') as f:
+                self.classes = json.load(f)
+        else:
+            self.classes = None
+        
+        self.size = size
+        self.default_prompt = "a high-quality, detailed, and professional image"
+        if overfit:
+            self.image_names = self.image_names[:10]
+
+    def __len__(self) -> int:
+        return len(self.image_names)
+
+    def __getitem__(self, idx: int) -> Dict:
+        file_name = self.image_names[idx]
+        target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpg"
+        source_path = f"{self.DATASET_PATH}/pascal_2012_scribble_color_coded/{file_name}.png"
+
+        target = cv2.imread(target_path)[:,:,::-1]
+        source = cv2.imread(source_path)[:,:,::-1]
+
+        # Do not forget that OpenCV read images in BGR order.
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
+        # Resize
+        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+        target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+
+        # Normalize target images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
+
+        prompt = self.default_prompt
+        if self.class_hint:
+            prompt = prompt + " of " + ', '.join(self.classes[file_name])
+
+        return dict(jpg=target, txt=prompt, hint=source, name=file_name)
 
 
 def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
@@ -112,6 +187,13 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
     elif config.dataset.value == DatasetEnum.PascalSegmentation.value:
         train_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
         val_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=False, overfit=config.overfit)
+        assert len(train_ds) + len(val_ds) == 12031 or config.overfit
+
+    elif config.dataset.value == DatasetEnum.PascalScribble.value:
+        train_ds = PascalScribbleDataset(size=tuple(config.image_size), train=True, 
+                                         overfit=config.overfit, class_hint=config.class_hint)
+        val_ds = PascalScribbleDataset(size=tuple(config.image_size), train=False, 
+                                       overfit=config.overfit, class_hint=config.class_hint)
         assert len(train_ds) + len(val_ds) == 12031 or config.overfit
 
     else:
