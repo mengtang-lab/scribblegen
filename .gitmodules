@@ -1,6 +1,0 @@
-[submodule "ControlNet"]
-	path = ControlNet
-	url = https://github.com/mengtang-lab/ControlNet
-[submodule "rloss"]
-	path = rloss
-	url = https://github.com/meng-tang/rloss/
