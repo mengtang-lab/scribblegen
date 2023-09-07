@@ -315,9 +315,14 @@ class ControlLDM(LatentDiffusion):
         self.only_mid_control = only_mid_control
         self.control_scales = [1.0] * 13
         self.use_tqdm = control_stage_config['params']['tqdm_for_sample']
+        # Manually change these in `train.py`
+        self.drop_out_rate = 0
+        self.drop_out_embedding = None
+        self.drop_out_text = None
 
     @torch.no_grad()
     def get_input(self, batch, k, bs=None, *args, **kwargs):
+        batch = self.mask_input(batch)
         x, c = super().get_input(batch, self.first_stage_key, *args, **kwargs)
         control = batch[self.control_key]
         if bs is not None:
@@ -326,6 +331,17 @@ class ControlLDM(LatentDiffusion):
         control = einops.rearrange(control, 'b h w c -> b c h w')
         control = control.to(memory_format=torch.contiguous_format).float()
         return x, dict(c_crossattn=[c], c_concat=[control])
+
+    def mask_input(self, batch):
+        if self.drop_out_rate > 0 and self.training:
+            b = batch['hint'].shape[0]
+            mask = torch.rand(b) < self.drop_out_rate
+            batch['hint'][mask] = self.drop_out_embedding.to(batch['hint'].device)
+            if self.drop_out_text is not None:
+                for i in range(b):
+                    if mask[i]:
+                        batch['txt'][i] = self.drop_out_text
+        return batch
 
     def apply_model(self, x_noisy, t, cond, *args, **kwargs):
         assert isinstance(cond, dict)

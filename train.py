@@ -1,3 +1,4 @@
+import torch
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
 import hydra
@@ -27,6 +28,9 @@ def main(config: ExpConfig):
     model.learning_rate = config.learning_rate
     model.sd_locked = config.sd_locked
     model.only_mid_control = config.only_mid_control
+    model.drop_out_rate = config.drop_out_rate
+    model.drop_out_embedding = torch.randn(*config.image_size, 3)
+    model.drop_out_text = config.drop_out_text
 
 
     # Set up trainer and data loaders
