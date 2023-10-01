@@ -1,9 +1,10 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 
 import cv2
 import pickle as pkl
 import numpy as np
 import json
+import os
 
 from torch.utils.data import Dataset, DataLoader
 from utils import loadAde20K
@@ -123,13 +124,23 @@ class PascalScribbleDataset(Dataset):
             train: bool = True, # Whether to use training split or not
             overfit: bool = False, # Whether to limit the dataset to 10 images
             class_hint: bool = False, # Whether to include class names in the CLIP prompt
+            split_path: Optional[str] = None,  # Path to the SSL split
         ):
         self.DATASET_PATH = '/mnt/data1/PascalVOC'
         
-        with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
+        with open(os.path.join(self.DATASET_PATH, 'train.txt' if train else 'val.txt'), 'r') as f:
             self.image_names = f.readlines()
         # Remove new line character
         self.image_names = list(map(lambda n: n[:-1], self.image_names))
+
+        if split_path is not None:
+            new_image_names = []
+            with open(os.path.join(self.DATASET_PATH, split_path), 'r') as f:
+                for line in f.readlines():
+                    id = line.split(' ')[0].split('/')[-1].split('.')[0]
+                    if id in self.image_names:
+                        new_image_names.append(id)
+            self.image_names = new_image_names
 
         # Get present classes
         self.class_hint = class_hint
@@ -191,10 +202,10 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
 
     elif config.dataset.value == DatasetEnum.PascalScribble.value:
         train_ds = PascalScribbleDataset(size=tuple(config.image_size), train=True, 
-                                         overfit=config.overfit, class_hint=config.class_hint)
+                                         overfit=config.overfit, class_hint=config.class_hint, split_path=config.split_path)
         val_ds = PascalScribbleDataset(size=tuple(config.image_size), train=False, 
                                        overfit=config.overfit, class_hint=config.class_hint)
-        assert len(train_ds) + len(val_ds) == 12031 or config.overfit
+        assert len(train_ds) + len(val_ds) == 12031 or config.overfit or config.split_path
 
     else:
         raise NotImplementedError

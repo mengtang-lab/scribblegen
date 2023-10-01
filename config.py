@@ -14,6 +14,7 @@ class ExpConfig:
     batch_size: int = MISSING
     learning_rate: float = MISSING
     dataset: DatasetEnum = MISSING
+    split_path: Optional[str] = None
 
     gpus: List[int] = MISSING
     log_dir: str = MISSING
@@ -32,4 +33,5 @@ class ExpConfig:
     model_path: str = './ControlNet/models/control_sd15_ini.ckpt'
     model_config_path: str = './ControlNet/models/cldm_v15.yaml'
     resume_path: Optional[str] = None
+    resume_init_only: bool = False  # whether to use `resume_path` only as a model initializaiton (i.e., don't resume training)
     logger_freq: int = 300

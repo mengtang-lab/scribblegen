@@ -23,13 +23,21 @@ def main(config: ExpConfig):
 
     # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
     model = create_model(config.model_config_path).cpu()
-    if config.resume_path is None:
-        model.load_state_dict(load_state_dict(config.model_path, location='cpu'))
+    embedding = None
+    if config.resume_path is not None:
+        state_dict = load_state_dict(config.resume_path, location="cpu")
+        if 'drop_out_embedding' in state_dict.keys():
+            embedding = state_dict['drop_out_embedding']
+            del state_dict['drop_out_embedding']
+        model.load_state_dict(state_dict)
     model.learning_rate = config.learning_rate
     model.sd_locked = config.sd_locked
     model.only_mid_control = config.only_mid_control
     model.drop_out_rate = config.drop_out_rate
-    model.drop_out_embedding = torch.randn(*config.image_size, 3)
+    if embedding is None:
+        model.drop_out_embedding = torch.nn.parameter.Parameter(torch.randn(*config.image_size, 3, requires_grad=True))
+    else:
+        model.drop_out_embedding = embedding
     model.drop_out_text = config.drop_out_text
 
 
@@ -53,7 +61,12 @@ def main(config: ExpConfig):
     OmegaConf.save(config, f"{trainer.logger.log_dir}/config.yaml")
 
     # Train!
-    trainer.fit(model, train_dataloader, val_dataloader, ckpt_path=config.resume_path)
+    trainer.fit(
+        model, 
+        train_dataloader, 
+        val_dataloader, 
+        ckpt_path=(None if config.resume_init_only else config.resume_path)
+    )
 
 if __name__ == "__main__":
     main()
