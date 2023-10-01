@@ -238,9 +238,11 @@ def main():
                         choices=['ce', 'focal'],
                         help='loss func type (default: ce)')
     # adding synthetic data arguments
-    parser.add_argument('--aug-data', type=str, default='none',
+    parser.add_argument('--aug-scheme', type=str, default='none',
                         choices=['none', 'normal', 'best', 'synth-only'],
                         help='synthetic data augmentation scheme to use (default: none)')
+    parser.add_argument('--aug-dataset', type=str, default='normal',
+                        help='synthetic datasset to use (default: normal)')
     parser.add_argument('--aug-ratio', type=int, default=1,
                         help='ratio of synthetic-to-real images to use (default 1:1)')
     parser.add_argument('--aug-use-all', action='store_true', default=False,

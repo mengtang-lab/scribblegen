@@ -49,10 +49,12 @@ class VOCSegmentation(Dataset):
         self.args = args
         self.debug = debug
         if self.split[0] == 'train':
-            self.aug_data = args.aug_data
+            self.aug_scheme = args.aug_scheme
+            self.aug_dataset = args.aug_dataset
             self.aug_ratio = args.aug_ratio
             self.aug_use_all = args.aug_use_all
-            if self.aug_data == 'best':
+            assert self.aug_dataset == 'normal' or (self.aug_ratio == 1 and not self.aug_use_all)
+            if self.aug_scheme == 'best':
                 path = os.path.join(self._base_dir, args.aug_best_dict)
                 assert os.path.isfile(path), f"No json file at {path}"
                 with open(path, 'r') as f:
@@ -60,7 +62,8 @@ class VOCSegmentation(Dataset):
             else:
                 selection_dict = None
         else:
-            self.aug_data = False
+            self.aug_scheme = False
+            self.aug_dataset = None
             self.aug_ratio = 0
             self.aug_use_all = False
 
@@ -83,7 +86,7 @@ class VOCSegmentation(Dataset):
 
             for ii, line in enumerate(lines):
                 self.count += 1
-                if args.aug_data != 'synth-only' or splt == 'val':
+                if args.aug_scheme != 'synth-only' or splt == 'val':
                     # Add real data
                     _image = os.path.join(self._image_dir, line + ".jpg")
                     _cat = os.path.join(self._cat_dir, line + ".png")
@@ -94,7 +97,7 @@ class VOCSegmentation(Dataset):
                     self.data.append((line, _image, _cat, _full_cat, -1))
 
                 # To use synthetic images too:
-                if split == 'train' and args.aug_data != 'none':
+                if split == 'train' and args.aug_scheme != 'none':
                     self.synth_data.append(self._add_synthetic(line, selection_dict))
 
         # Display stats
@@ -103,7 +106,7 @@ class VOCSegmentation(Dataset):
 
     def _add_synthetic(self, line, selection_dict=None):
         # Returns list of (image id, image path, label, full label, dataset used)
-        if self.aug_data == 'none':
+        if self.aug_scheme == 'none':
             return [], []
         data = []
         num_datasets = self.aug_ratio if not self.aug_use_all else 8
@@ -115,7 +118,7 @@ class VOCSegmentation(Dataset):
             else:
                 # Naively pick ith synthetic image from ith dataset
                 dataset = i + 1
-            synth_dir = os.path.join(self._synth_dir, f'{label_type}_{dataset}')
+            synth_dir = os.path.join(self._synth_dir, f'{label_type}_{self.aug_dataset}_{dataset}')
             _id = line
             _image = os.path.join(synth_dir, line + ".jpeg")
             _cat = os.path.join(self._cat_dir, line + ".png")
@@ -128,9 +131,9 @@ class VOCSegmentation(Dataset):
 
 
     def __len__(self):
-        if self.aug_data == 'none':
+        if self.aug_scheme == 'none':
             return self.count
-        elif self.aug_data == 'synth-only':
+        elif self.aug_scheme == 'synth-only':
             return self.aug_ratio * self.count
         else:
             return (1 + self.aug_ratio) * self.count
@@ -153,7 +156,7 @@ class VOCSegmentation(Dataset):
 
 
     def _make_img_gt_point_pair(self, index):
-        if index < len(self.data) and self.aug_data != 'synth-only':
+        if index < len(self.data) and self.aug_scheme != 'synth-only':
             _id, _img_path, _target_path, _full_target_path, _dataset = self.data[index]
         elif self.aug_use_all:
             # img_idx is the index of the image of Pascal to load
@@ -164,7 +167,7 @@ class VOCSegmentation(Dataset):
         else:
             img_idx = index % self.count
             instance_idx = index // self.count
-            if self.aug_data != 'synth-only':
+            if self.aug_scheme != 'synth-only':
                 instance_idx -= 1 # shift down since first `self.count` images are real not synth
             _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[img_idx][instance_idx]
         _img = Image.open(_img_path).convert('RGB')
