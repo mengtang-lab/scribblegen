@@ -373,8 +373,15 @@ class ControlLDM(LatentDiffusion):
         log = dict()
         z, c = self.get_input(batch, self.first_stage_key, bs=N)
         c_cat, c = c["c_concat"][0][:N], c["c_crossattn"][0][:N]
+        if self.drop_out_embedding is not None:
+            uncond_batch = batch.copy()
+            uncond_batch["hint"] = self.drop_out_embedding.repeat(N, 1, 1, 1)
+            #raise ValueError("stfu homie its", self.drop_out_embedding.shape)
+            _, c_uncond = self.get_input(uncond_batch, self.first_stage_key, bs=N)
+            c_cat_uncond, c_uncond = c_uncond["c_concat"][0][:N], c_uncond["c_crossattn"][0][:N]
         N = min(z.shape[0], N)
         n_row = min(z.shape[0], n_row)
+        log["original_input"] = batch["jpg"]
         log["reconstruction"] = self.decode_first_stage(z)
         log["control"] = c_cat * 2.0 - 1.0
         log["conditioning"] = log_txt_as_img((512, 512), batch[self.cond_stage_key], size=16)
@@ -409,9 +416,12 @@ class ControlLDM(LatentDiffusion):
                 log["denoise_row"] = denoise_grid
 
         if unconditional_guidance_scale > 1.0:
-            uc_cross = self.get_unconditional_conditioning(N)
-            uc_cat = c_cat  # torch.zeros_like(c_cat)
-            uc_full = {"c_concat": [uc_cat], "c_crossattn": [uc_cross]}
+            if self.drop_out_embedding is not None:
+                uc_cross = self.get_unconditional_conditioning(N)
+                uc_cat = c_cat  # torch.zeros_like(c_cat)
+                uc_full = {"c_concat": [uc_cat], "c_crossattn": [uc_cross]}
+            else:
+                uc_full = {"c_concat": [c_cat_uncond], "c_crossattn": [c_uncond]}
             samples_cfg, _ = self.sample_log(cond={"c_concat": [c_cat], "c_crossattn": [c]},
                                              batch_size=N, ddim=use_ddim,
                                              ddim_steps=ddim_steps, eta=ddim_eta,
