@@ -23,6 +23,10 @@ def main():
                         help='dataset to run inference on')
     parser.add_argument('--add-hint', action='store_true', default=False,
                         help='whether to add class hints to prompts')
+    parser.add_argument('--guidance-scale', type=float, default=9.,
+                        help='scale between unconditioned and conditioned model output')
+    parser.add_argument('--num-steps', type=int, default=50,
+                        help='number of inference steps')
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.gpu_id}')
@@ -36,14 +40,15 @@ def main():
     model = create_model(model_config_path).to(device)
     model.load_state_dict(load_state_dict(args.checkpoint, location=device))
     model.cond_stage_model.device = device
+    model.eval()
 
     for i, data in enumerate(dataset):
         data['hint'] = torch.tensor(data['hint'], device=device).unsqueeze(0)
         data['jpg'] = torch.tensor(data['jpg'], device=device).unsqueeze(0)
         data['txt'] = [data['txt']]
-        log = model.log_images(data)
+        log = model.log_images(data, unconditional_guidance_scale=args.guidance_scale, ddim_steps=args.num_steps)
 
-        img = log['samples_cfg_scale_9.00']
+        img = log[f'samples_cfg_scale_{args.guidance_scale:.2f}']
         img = torch.clamp(img, -1., 1.)
         img = img.cpu().numpy()[0]
         img = np.moveaxis(img, 0, -1)
