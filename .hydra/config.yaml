@@ -1,16 +1,17 @@
 max_epochs: 200
-batch_size: 4
+batch_size: 16
 learning_rate: 0.0001
 dataset: PascalScribble
+split_path: ./SSL_splits/1_8/labeled.txt
 gpus:
-- 0
-- 1
-- 2
+- 3
 log_dir: ./logs/PascalScribble
 accumulate_grad_batches: 1
 image_size:
-- 768
-- 768
+- 512
+- 512
+drop_out_rate: 0.0
+drop_out_text: null
 class_hint: true
 overfit: false
 num_workers: 4
@@ -18,5 +19,6 @@ sd_locked: true
 only_mid_control: false
 model_path: ./ControlNet/models/control_sd15_ini.ckpt
 model_config_path: ./ControlNet/models/cldm_v15.yaml
-resume_path: null
+resume_path: ./logs/PascalScribble/lightning_logs/uncond_16/checkpoints/epoch=199-step=44199.ckpt
+resume_init_only: true
 logger_freq: 200

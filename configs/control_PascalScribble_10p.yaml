@@ -1,0 +1,15 @@
+defaults:
+  - base
+  - _self_
+
+max_epochs: 200
+batch_size: 16
+learning_rate: 1e-4
+dataset: PascalScribble
+split_path: ./SSL_splits/1_8/labeled.txt
+class_hint: true
+drop_out_rate: 0.1
+
+gpus: [0]
+log_dir: ./logs/PascalScribble
+logger_freq: 200

@@ -14,6 +14,15 @@
             "args": ["--backbone", "mobilenet", "--lr", "0.007", "--workers", "6", "--epochs", "120", "--scribbles", "--batch-size", "12", "--checkname", "deeplab-mobilenet", "--eval-interval", "2", "--dataset", "pascal", "--save-interval", "5", "--densecrfloss", "2e-9", "--rloss-scale", "0.5", "--sigma-rgb", "15", "--sigma-xy", "100", "--gpu-ids", "0", "--resume", "/home/jacob/scribblegen/rloss/pytorch/pytorch-deeplab_v3_plus/run/pascal/deeplab-mobilenet/rloss_synth_pre_1_60/checkpoint_epoch_60.pth.tar"],
         },
         {
+            "name": "Python ControlNet: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--config-name", "control_PascalScribble_hint_guided"],
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

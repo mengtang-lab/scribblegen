@@ -112,17 +112,15 @@ hydra:
     hydra:
     - hydra.run.dir="/home/jacob/scribblegen"
     - hydra.job.name=train_ddp_process_1
-    - hydra.run.dir="/home/jacob/scribblegen"
-    - hydra.job.name=train_ddp_process_2
     - hydra.mode=RUN
     task: []
   job:
-    name: train_ddp_process_2
+    name: train_ddp_process_1
     chdir: null
     override_dirname: ''
     id: ???
     num: ???
-    config_name: control_PascalScribble_hint_hq_multi
+    config_name: control_PascalScribble_10p_pretrained.yaml
     env_set: {}
     env_copy: []
     config:
