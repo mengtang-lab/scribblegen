@@ -2,6 +2,7 @@ import einops
 import torch
 import torch as th
 import torch.nn as nn
+import numpy as np
 
 from ldm.modules.diffusionmodules.util import (
     conv_nd,
@@ -366,25 +367,20 @@ class ControlLDM(LatentDiffusion):
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
                    quantize_denoised=True, inpaint=True, plot_denoise_rows=False, plot_progressive_rows=True,
                    plot_diffusion_rows=False, unconditional_guidance_scale=9.0, unconditional_guidance_label=None,
-                   use_ema_scope=True,
+                   use_ema_scope=True, noise_level=1.0, log_every_t=100,
                    **kwargs):
         use_ddim = ddim_steps is not None
 
         log = dict()
         z, c = self.get_input(batch, self.first_stage_key, bs=N)
+        z = z[:N]
         c_cat, c = c["c_concat"][0][:N], c["c_crossattn"][0][:N]
-        if self.drop_out_embedding is not None:
-            uncond_batch = batch.copy()
-            uncond_batch["hint"] = self.drop_out_embedding.repeat(N, 1, 1, 1)
-            #raise ValueError("stfu homie its", self.drop_out_embedding.shape)
-            _, c_uncond = self.get_input(uncond_batch, self.first_stage_key, bs=N)
-            c_cat_uncond, c_uncond = c_uncond["c_concat"][0][:N], c_uncond["c_crossattn"][0][:N]
         N = min(z.shape[0], N)
         n_row = min(z.shape[0], n_row)
-        log["original_input"] = batch["jpg"]
         log["reconstruction"] = self.decode_first_stage(z)
         log["control"] = c_cat * 2.0 - 1.0
         log["conditioning"] = log_txt_as_img((512, 512), batch[self.cond_stage_key], size=16)
+        log["orig_input"] = z
 
         if plot_diffusion_rows:
             # get diffusion row
@@ -416,22 +412,32 @@ class ControlLDM(LatentDiffusion):
                 log["denoise_row"] = denoise_grid
 
         if unconditional_guidance_scale > 1.0:
-            if self.drop_out_embedding is not None:
+            if self.drop_out_embedding is None:
                 uc_cross = self.get_unconditional_conditioning(N)
                 uc_cat = c_cat  # torch.zeros_like(c_cat)
                 uc_full = {"c_concat": [uc_cat], "c_crossattn": [uc_cross]}
             else:
+                uncond_batch = batch.copy()
+                uncond_batch["hint"] = self.drop_out_embedding.repeat(N, 1, 1, 1)
+                _, c_uncond = self.get_input(uncond_batch, self.first_stage_key, bs=N)
+                c_cat_uncond, c_uncond = c_uncond["c_concat"][0][:N], c_uncond["c_crossattn"][0][:N]
                 uc_full = {"c_concat": [c_cat_uncond], "c_crossattn": [c_uncond]}
-            samples_cfg, _ = self.sample_log(cond={"c_concat": [c_cat], "c_crossattn": [c]},
+            assert 1000 * noise_level >= ddim_steps
+            t_start = torch.full((N, ), 999 * noise_level, device=z.device, dtype=torch.int64)
+            timesteps = np.linspace(0, 1000 * noise_level, ddim_steps + 1, dtype=np.int64)[:-1] + 1
+            noisy_x = self.q_sample(z, t_start)
+            log["noisy_input"] = noisy_x
+            samples_cfg, inter = self.sample_log(cond={"c_concat": [c_cat], "c_crossattn": [c]},
                                              batch_size=N, ddim=use_ddim,
                                              ddim_steps=ddim_steps, eta=ddim_eta,
                                              unconditional_guidance_scale=unconditional_guidance_scale,
-                                             unconditional_conditioning=uc_full,
+                                             unconditional_conditioning=uc_full, x_T=noisy_x,
+                                             timesteps=timesteps, log_every_t=log_every_t,
                                              )
             x_samples_cfg = self.decode_first_stage(samples_cfg)
             log[f"samples_cfg_scale_{unconditional_guidance_scale:.2f}"] = x_samples_cfg
 
-        return log
+        return log, inter
 
     @torch.no_grad()
     def sample_log(self, cond, batch_size, ddim, ddim_steps, **kwargs):
