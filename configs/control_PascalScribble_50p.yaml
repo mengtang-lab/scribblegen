@@ -6,9 +6,10 @@ max_epochs: 200
 batch_size: 16
 learning_rate: 1e-4
 dataset: PascalScribble
+split_path: ./SSL_splits/1_2/labeled.txt
 class_hint: true
 drop_out_rate: 0.1
 
-gpus: [0]
+gpus: [0, 1, 2, 3]
 log_dir: ./logs/PascalScribble
 logger_freq: 200
