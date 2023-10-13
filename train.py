@@ -9,6 +9,7 @@ from data import get_dataloaders
 
 import sys
 import os
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 sys.path.append('./ControlNet') # to let ControlNet imports work
 from ControlNet.cldm.logger import ImageLogger
 from ControlNet.cldm.model import create_model, load_state_dict
@@ -30,6 +31,8 @@ def main(config: ExpConfig):
             embedding = state_dict['drop_out_embedding']
             del state_dict['drop_out_embedding']
         model.load_state_dict(state_dict)
+    else:
+        model.load_state_dict(load_state_dict(config.model_path, location='cpu'))
     model.learning_rate = config.learning_rate
     model.sd_locked = config.sd_locked
     model.only_mid_control = config.only_mid_control

@@ -27,6 +27,8 @@ def main():
                         help='scale between unconditioned and conditioned model output')
     parser.add_argument('--num-steps', type=int, default=50,
                         help='number of inference steps')
+    parser.add_argument('--encode-ratio', type=float, default=1.0,
+                        help='level of noise to add to input image in range [0, 1]')
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.gpu_id}')
@@ -38,7 +40,13 @@ def main():
     assert len(os.listdir(out_dir)) == 0
 
     model = create_model(model_config_path).to(device)
-    model.load_state_dict(load_state_dict(args.checkpoint, location=device))
+    embedding = None
+    state_dict = load_state_dict(args.checkpoint, location=device)
+    if 'drop_out_embedding' in state_dict.keys():
+        embedding = state_dict['drop_out_embedding']
+        del state_dict['drop_out_embedding']
+    model.load_state_dict(state_dict)
+    model.drop_out_embedding = embedding
     model.cond_stage_model.device = device
     model.eval()
 
@@ -46,7 +54,12 @@ def main():
         data['hint'] = torch.tensor(data['hint'], device=device).unsqueeze(0)
         data['jpg'] = torch.tensor(data['jpg'], device=device).unsqueeze(0)
         data['txt'] = [data['txt']]
-        log = model.log_images(data, unconditional_guidance_scale=args.guidance_scale, ddim_steps=args.num_steps)
+        log = model.log_images(
+            data, N=1, 
+            unconditional_guidance_scale=args.guidance_scale,
+            ddim_steps=args.num_steps,
+            noise_level=args.encode_ratio,
+        )
 
         img = log[f'samples_cfg_scale_{args.guidance_scale:.2f}']
         img = torch.clamp(img, -1., 1.)

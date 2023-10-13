@@ -367,7 +367,7 @@ class ControlLDM(LatentDiffusion):
     def log_images(self, batch, N=4, n_row=2, sample=False, ddim_steps=50, ddim_eta=0.0, return_keys=None,
                    quantize_denoised=True, inpaint=True, plot_denoise_rows=False, plot_progressive_rows=True,
                    plot_diffusion_rows=False, unconditional_guidance_scale=9.0, unconditional_guidance_label=None,
-                   use_ema_scope=True, noise_level=1.0, log_every_t=100,
+                   use_ema_scope=True, noise_level=1.0, log_every_t=100, return_inter=False,
                    **kwargs):
         use_ddim = ddim_steps is not None
 
@@ -437,7 +437,8 @@ class ControlLDM(LatentDiffusion):
             x_samples_cfg = self.decode_first_stage(samples_cfg)
             log[f"samples_cfg_scale_{unconditional_guidance_scale:.2f}"] = x_samples_cfg
 
-        return log, inter
+        if return_inter: return log, inter
+        return log
 
     @torch.no_grad()
     def sample_log(self, cond, batch_size, ddim, ddim_steps, **kwargs):
