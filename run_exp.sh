@@ -47,3 +47,11 @@ nohup python3 dataset_generation.py --checkpoint "logs/PascalScribble/lightning_
 nohup python3 dataset_generation.py --checkpoint "logs/PascalScribble/lightning_logs/class_hint_1/checkpoints/epoch=199-step=132399.ckpt" --out-dir "temp_data_08" --gpu-id 2 --add-hint --guidance-scale 2 --encode-ratio 0.8 &> logs/nohup/gen_08.log &
 
 nohup python3 dataset_generation.py --checkpoint "logs/PascalScribble/lightning_logs/class_hint_1/checkpoints/epoch=199-step=132399.ckpt" --out-dir "temp_data_09" --gpu-id 2 --add-hint --guidance-scale 2 --encode-ratio 0.9 &> logs/nohup/gen_09.log &
+
+
+
+nohup python3 dataset_generation.py --checkpoint "logs/PascalScribble/lightning_logs/class_hint_1/checkpoints/epoch=199-step=132399.ckpt" --out-dir "temp_data_12_5_sig_05_1" --gpu-id 3 --add-hint --guidance-scale 2 --encode-ratio 0.5  --batch-size 16 --split "./SSL_splits/1_8/labeled.txt" &> logs/nohup/temp_data_12_5_sig_05_1.log &
+
+nohup python3 dataset_generation.py --checkpoint "logs/PascalScribble/lightning_logs/class_hint_1/checkpoints/epoch=199-step=132399.ckpt" --out-dir "temp_data_50_sig_1_1" --gpu-id 2 --add-hint --guidance-scale 2 --encode-ratio 1.0  --batch-size 16 --split "./SSL_splits/1_2/labeled.txt" &> logs/nohup/temp_data_50_sig_1_1.log &
+
+nohup python3 dataset_generation.py --checkpoint "logs/PascalScribble/lightning_logs/class_hint_1/checkpoints/epoch=199-step=132399.ckpt" --out-dir "temp_data_50_sig_05_1" --gpu-id 1 --add-hint --guidance-scale 2 --encode-ratio 0.5  --batch-size 16 --split "./SSL_splits/1_2/labeled.txt" &> logs/nohup/temp_data_50_sig_05_1.log &

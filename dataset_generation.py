@@ -5,6 +5,7 @@ from data import PascalSegmentationDataset, PascalScribbleDataset, ADE20KDataset
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from tqdm import tqdm
 
 sys.path.append('/home/jacob/scribblegen/ControlNet')
 from ControlNet.cldm.model import create_model, load_state_dict
@@ -29,10 +30,15 @@ def main():
                         help='number of inference steps')
     parser.add_argument('--encode-ratio', type=float, default=1.0,
                         help='level of noise to add to input image in range [0, 1]')
+    parser.add_argument('--split', type=str, default=None,
+                        help='path to split of images to use')
+    parser.add_argument('--batch-size', type=int, default=1,
+                        help='batch size to use for inference')
     args = parser.parse_args()
 
     device = torch.device(f'cuda:{args.gpu_id}')
-    dataset = PascalScribbleDataset(train=True, class_hint={args.add_hint})
+    dataset = PascalScribbleDataset(train=True, class_hint=args.add_hint, split_path=args.split)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
     out_dir = args.out_dir
 
     model_config_path = './ControlNet/models/cldm_v15.yaml'
@@ -50,28 +56,26 @@ def main():
     model.cond_stage_model.device = device
     model.eval()
 
-    for i, data in enumerate(dataset):
-        data['hint'] = torch.tensor(data['hint'], device=device).unsqueeze(0)
-        data['jpg'] = torch.tensor(data['jpg'], device=device).unsqueeze(0)
-        data['txt'] = [data['txt']]
+    for data in tqdm(dataloader):
         log = model.log_images(
-            data, N=1, 
+            data, N=len(data['jpg']),
             unconditional_guidance_scale=args.guidance_scale,
             ddim_steps=args.num_steps,
             noise_level=args.encode_ratio,
         )
 
-        img = log[f'samples_cfg_scale_{args.guidance_scale:.2f}']
-        img = torch.clamp(img, -1., 1.)
-        img = img.cpu().numpy()[0]
-        img = np.moveaxis(img, 0, -1)
-        img = (img + 1) / 2
-        img = (img * 255).astype(np.uint8)
-        img = img[...,::-1]
+        imgs = log[f'samples_cfg_scale_{args.guidance_scale:.2f}']
+        imgs = torch.clamp(imgs, -1., 1.)
+        imgs = imgs.cpu().numpy()
+        imgs = np.moveaxis(imgs, 1, -1)
+        imgs = (imgs + 1) / 2
+        imgs = (imgs * 255).astype(np.uint8)
+        imgs = imgs[...,::-1]
+        print(imgs.shape)
 
-        path = os.path.join(out_dir, data['name'] + '.jpeg')
-        print(f'Saving new image to {path} {i}/{len(dataset)}')
-        plt.imsave(path, img, format='jpeg')
+        for i, img in enumerate(imgs):
+            path = os.path.join(out_dir, data['name'][i] + '.jpeg')
+            plt.imsave(path, img, format='jpeg')
 
 if __name__ == "__main__":
    main()
