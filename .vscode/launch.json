@@ -20,7 +20,7 @@
             "program": "~/scribblegen/train.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--config-name", "control_PascalScribble_hint_guided.yaml"],
+            "args": ["--config-name", "control_PascalScribble_onehot.yaml"],
         },
         {
             "name": "Python: Current File",

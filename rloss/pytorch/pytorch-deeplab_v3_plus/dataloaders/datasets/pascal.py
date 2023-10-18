@@ -48,11 +48,25 @@ class VOCSegmentation(Dataset):
 
         self.args = args
         self.debug = debug
+        self.epoch = 0
         if self.split[0] == 'train':
             self.aug_scheme = args.aug_scheme
             self.aug_dataset = args.aug_dataset
             self.aug_ratio = args.aug_ratio
             self.aug_use_all = args.aug_use_all
+            self.replacement_prob = args.replacement_prob
+            if args.curriculum is not None:
+                curriculum = json.loads(args.curriculum)
+                epochs = list(curriculum.keys())
+                sets = list(curriculum.values())
+                sort_idx = np.argsort(epochs)
+                self.curriculum_epochs = [int(epochs[idx]) for idx in sort_idx]
+                self.curriculum_sets = [sets[idx] for idx in sort_idx]
+                assert self.aug_ratio == 1
+            else:
+                self.curriculum_epochs = None
+                self.curriculum_sets = None
+            
             assert self.aug_dataset == 'normal' or (self.aug_ratio == 1 and not self.aug_use_all)
             if self.aug_scheme == 'best':
                 path = os.path.join(self._base_dir, args.aug_best_dict)
@@ -109,16 +123,25 @@ class VOCSegmentation(Dataset):
         if self.aug_scheme == 'none':
             return [], []
         data = []
-        num_datasets = self.aug_ratio if not self.aug_use_all else 8
+        if self.aug_use_all:
+            num_datasets = 8
+        elif self.curriculum_sets is not None:
+            num_datasets = len(self.curriculum_sets)
+        else:
+            num_datasets = self.aug_ratio
         for i in range(num_datasets):
             label_type = 'scribble' if self.args.scribbles else 'full'
-            if selection_dict is not None: # Only useful if aug_use_all = False
-                # Pick the dataset to use based on ordering in the selection dict
-                dataset = selection_dict[line][i]
+            if self.curriculum_sets is None:
+                if selection_dict is not None: # Only useful if aug_use_all = False
+                    # Pick the dataset to use based on ordering in the selection dict
+                    dataset = selection_dict[line][i]
+                else:
+                    # Naively pick ith synthetic image from ith dataset
+                    dataset = i + 1
+                synth_dir = os.path.join(self._synth_dir, f'{label_type}_{self.aug_dataset}_{dataset}')
             else:
-                # Naively pick ith synthetic image from ith dataset
+                synth_dir = os.path.join(self._synth_dir, f'{label_type}_{self.curriculum_sets[i]}_1')
                 dataset = i + 1
-            synth_dir = os.path.join(self._synth_dir, f'{label_type}_{self.aug_dataset}_{dataset}')
             _id = line
             _image = os.path.join(synth_dir, line + ".jpeg")
             _cat = os.path.join(self._cat_dir, line + ".png")
@@ -131,7 +154,7 @@ class VOCSegmentation(Dataset):
 
 
     def __len__(self):
-        if self.aug_scheme == 'none':
+        if self.aug_scheme == 'none' or self.aug_scheme == 'replacement':
             return self.count
         elif self.aug_scheme == 'synth-only':
             return self.aug_ratio * self.count
@@ -157,7 +180,21 @@ class VOCSegmentation(Dataset):
 
     def _make_img_gt_point_pair(self, index):
         if index < len(self.data) and self.aug_scheme != 'synth-only':
-            _id, _img_path, _target_path, _full_target_path, _dataset = self.data[index]
+            if self.aug_scheme == 'replacement':
+                prob = torch.rand((1, )).item()
+                if prob <= self.replacement_prob:
+                    if self.curriculum_epochs is not None:
+                        instance_idx = 0
+                        while instance_idx != len(self.curriculum_epochs) and self.epoch >= self.curriculum_epochs[instance_idx]:
+                            instance_idx += 1
+                        instance_idx -= 1
+                    else:
+                        instance_idx = 0
+                    _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[index][instance_idx]
+                else:
+                    _id, _img_path, _target_path, _full_target_path, _dataset = self.data[index]
+            else:
+                _id, _img_path, _target_path, _full_target_path, _dataset = self.data[index]
         elif self.aug_use_all:
             # img_idx is the index of the image of Pascal to load
             # instance_idx is the index of which instance of the synthetic recreation of that image to use
@@ -167,7 +204,12 @@ class VOCSegmentation(Dataset):
         else:
             img_idx = index % self.count
             instance_idx = index // self.count
-            if self.aug_scheme != 'synth-only':
+            if self.curriculum_epochs is not None:
+                instance_idx = 0
+                while instance_idx != len(self.curriculum_epochs) and self.epoch >= self.curriculum_epochs[instance_idx]:
+                    instance_idx += 1
+                instance_idx -= 1
+            elif self.aug_scheme != 'synth-only':
                 instance_idx -= 1 # shift down since first `self.count` images are real not synth
             _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[img_idx][instance_idx]
         _img = Image.open(_img_path).convert('RGB')

@@ -95,3 +95,25 @@ nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers
 nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme normal --aug-dataset sig_08 --aug-ratio 1 --gpu-ids 2  &> nohup_logs/rloss_aug_sig_08.log &
 
 nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme normal --aug-dataset sig_09 --aug-ratio 1 --gpu-ids 2  &> nohup_logs/rloss_aug_sig_09.log &
+
+
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.1 --gpu-ids 1  &> nohup_logs/rloss_replace_01.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.2 --gpu-ids 1  &> nohup_logs/rloss_replace_02.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.3 --gpu-ids 1  &> nohup_logs/rloss_replace_03.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.4 --gpu-ids 1  &> nohup_logs/rloss_replace_04.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.5 --gpu-ids 1  &> nohup_logs/rloss_replace_05.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.6 --gpu-ids 2  &> nohup_logs/rloss_replace_06.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.7 --gpu-ids 2  &> nohup_logs/rloss_replace_07.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.8 --gpu-ids 2  &> nohup_logs/rloss_replace_08.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme replacement --aug-dataset s_2_n_100 --aug-ratio 1 --replacement-prob 0.9 --gpu-ids 2  &> nohup_logs/rloss_replace_09.log &
+
+nohup python train_withdensecrfloss.py --backbone mobilenet --lr 0.007 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-mobilenet --eval-interval 2 --dataset pascal --save-interval 5 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme normal --aug-dataset normal --aug-ratio 1 --gpu-ids 2 --curriculum '{"0": "sig_05", "10": "sig_06", "20": "sig_07", "30": "sig_08", "40": "sig_09", "50": "normal"}'  &> nohup_logs/rloss_curriculum.log &

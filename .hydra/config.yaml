@@ -2,17 +2,16 @@ max_epochs: 200
 batch_size: 16
 learning_rate: 0.0001
 dataset: PascalScribble
-split_path: ./SSL_splits/1_2/labeled.txt
+split_path: null
 gpus:
 - 0
-- 1
-- 2
 - 3
 log_dir: ./logs/PascalScribble
 accumulate_grad_batches: 1
 image_size:
 - 512
 - 512
+one_hot_labels: true
 drop_out_rate: 0.1
 drop_out_text: null
 class_hint: true

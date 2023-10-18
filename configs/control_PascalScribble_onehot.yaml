@@ -1,0 +1,15 @@
+defaults:
+  - base
+  - _self_
+
+max_epochs: 200
+batch_size: 16
+learning_rate: 1e-4
+dataset: PascalScribble
+class_hint: true
+one_hot_labels: true
+drop_out_rate: 0.1
+
+gpus: [0, 3]
+log_dir: ./logs/PascalScribble
+logger_freq: 200

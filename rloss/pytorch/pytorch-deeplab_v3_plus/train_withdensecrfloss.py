@@ -104,6 +104,7 @@ class Trainer(object):
         train_celoss = 0.0
         train_crfloss = 0.0
         self.model.train()
+        self.train_loader.epoch = epoch
         tbar = tqdm(self.train_loader)
         num_img_tr = len(self.train_loader)
         softmax = nn.Softmax(dim=1)
@@ -239,7 +240,7 @@ def main():
                         help='loss func type (default: ce)')
     # adding synthetic data arguments
     parser.add_argument('--aug-scheme', type=str, default='none',
-                        choices=['none', 'normal', 'best', 'synth-only'],
+                        choices=['none', 'normal', 'best', 'synth-only', 'replacement'],
                         help='synthetic data augmentation scheme to use (default: none)')
     parser.add_argument('--aug-dataset', type=str, default='normal',
                         help='synthetic datasset to use (default: normal)')
@@ -248,7 +249,11 @@ def main():
     parser.add_argument('--aug-use-all', action='store_true', default=False,
                         help='whether to randomly sample from all possible synthetic images (default: False)')
     parser.add_argument('--aug-best-dict', type=str, default='none',
-                        help='path to dict of ordering to select samples from, needed if aug-data=best')
+                        help='path to dict of ordering to select samples from, needed if aug-scheme=best')
+    parser.add_argument('--replacement-prob', type=float, default=0.0,
+                        help='probability of replacing an image if using aug-scheme=replacement')
+    parser.add_argument('--curriculum', type=str, default=None,
+                        help='json of epoch: dataset to use for curriculum learning (default: None)')
     # training hyper params
     parser.add_argument('--epochs', type=int, default=None, metavar='N',
                         help='number of epochs to train (default: auto)')
