@@ -5,6 +5,8 @@ import pickle as pkl
 import numpy as np
 import json
 import os
+import torch
+import matplotlib.pyplot as plt
 
 from torch.utils.data import Dataset, DataLoader
 from utils import loadAde20K
@@ -124,7 +126,8 @@ class PascalScribbleDataset(Dataset):
             train: bool = True, # Whether to use training split or not
             overfit: bool = False, # Whether to limit the dataset to 10 images
             class_hint: bool = False, # Whether to include class names in the CLIP prompt
-            split_path: Optional[str] = None,  # Path to the SSL split
+            split_path: Optional[str] = None, # Path to the SSL split
+            one_hot_labels: bool = False, # Whether to use one-hot labels instead of RGB for hints
         ):
         self.DATASET_PATH = '/mnt/data1/PascalVOC'
         
@@ -151,6 +154,7 @@ class PascalScribbleDataset(Dataset):
             self.classes = None
         
         self.size = size
+        self.one_hot_labels = one_hot_labels
         self.default_prompt = "a high-quality, detailed, and professional image"
         if overfit:
             self.image_names = self.image_names[:10]
@@ -161,24 +165,26 @@ class PascalScribbleDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict:
         file_name = self.image_names[idx]
         target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpg"
-        source_path = f"{self.DATASET_PATH}/pascal_2012_scribble_color_coded/{file_name}.png"
 
         target = cv2.imread(target_path)[:,:,::-1]
-        source = cv2.imread(source_path)[:,:,::-1]
-
-        # Do not forget that OpenCV read images in BGR order.
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
         target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
-
-        # Resize
-        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
         target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
-
-        # Normalize source images to [0, 1].
-        source = source.astype(np.float32) / 255.0
-
-        # Normalize target images to [-1, 1].
         target = (target.astype(np.float32) / 127.5) - 1.0
+
+        if self.one_hot_labels:
+            source_path = f"{self.DATASET_PATH}/pascal_2012_scribble/{file_name}.png"
+            source = plt.imread(source_path)
+            # Use nearest neigbour upscaling so that labels are correct
+            source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_NEAREST)
+            source = torch.tensor(source * 255, dtype=torch.int64)
+            source[source > 20] = 21
+            source = torch.nn.functional.one_hot(source, num_classes=22).float()
+        else:
+            source_path = f"{self.DATASET_PATH}/pascal_2012_scribble_color_coded/{file_name}.png"
+            source = cv2.imread(source_path)[:,:,::-1]
+            source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+            source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+            source = source.astype(np.float32) / 255.0
 
         prompt = self.default_prompt
         if self.class_hint:
@@ -202,9 +208,12 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
 
     elif config.dataset.value == DatasetEnum.PascalScribble.value:
         train_ds = PascalScribbleDataset(size=tuple(config.image_size), train=True, 
-                                         overfit=config.overfit, class_hint=config.class_hint, split_path=config.split_path)
+                                         overfit=config.overfit, class_hint=config.class_hint, 
+                                         one_hot_labels=config.one_hot_labels,
+                                         split_path=config.split_path)
         val_ds = PascalScribbleDataset(size=tuple(config.image_size), train=False, 
-                                       overfit=config.overfit, class_hint=config.class_hint)
+                                       overfit=config.overfit, class_hint=config.class_hint,
+                                       one_hot_labels=config.one_hot_labels)
         assert len(train_ds) + len(val_ds) == 12031 or config.overfit or config.split_path
 
     else:

@@ -21,6 +21,7 @@ class ExpConfig:
 
     accumulate_grad_batches: int = 1
     image_size: Tuple[int, int] = (512, 512)
+    one_hot_labels: bool = False
     drop_out_rate: float = 0
     drop_out_text: Optional[str] = None  # the prompt to use when dropped out, or None to not drop out prompt at all
     class_hint: bool = False  # whether to include class names in the prompt, currently only for pascal scribbles

@@ -8,3 +8,5 @@ __pycache__/
 temp*
 
 *.ipynb
+.hydra/
+.vscode/

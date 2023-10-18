@@ -8,6 +8,39 @@ from pytorch_lightning.callbacks import Callback
 from pytorch_lightning.utilities import rank_zero_only
 import logging
 
+def get_pascal_labels():
+    """Load the mapping that associates pascal classes with label colors
+    Returns:
+        np.ndarray with dimensions (21, 3)
+    """
+    return np.asarray([[0, 0, 0], [128, 0, 0], [0, 128, 0], [128, 128, 0],
+                       [0, 0, 128], [128, 0, 128], [0, 128, 128], [128, 128, 128],
+                       [64, 0, 0], [192, 0, 0], [64, 128, 0], [192, 128, 0],
+                       [64, 0, 128], [192, 0, 128], [64, 128, 128], [192, 128, 128],
+                       [0, 64, 0], [128, 64, 0], [0, 192, 0], [128, 192, 0],
+                       [0, 64, 128]])
+
+def decode_segmap(label_mask):
+    """Decode segmentation class labels into a color image
+    Args:
+        label_mask: an (B,M,N) tensor of integer values denoting
+          the class label at each spatial location.
+    Returns:
+        the resulting decoded color image as a (B, C, M, N) tensor of floats.
+    """
+    n_classes = 21
+    b, m, n = label_mask.shape
+    label_colours = get_pascal_labels()
+
+    rgb = torch.zeros((b, m, n, 3))
+    for ll in range(0, n_classes):
+        rgb[label_mask == ll][..., 0] = label_colours[ll, 0]
+        rgb[label_mask == ll][..., 1] = label_colours[ll, 1]
+        rgb[label_mask == ll][..., 2] = label_colours[ll, 2]
+    rgb = rgb / 255.0
+    rgb = torch.moveaxis(rgb, 3, 1)
+    return rgb
+
 
 class ImageLogger(Callback):
     def __init__(self, batch_frequency=2000, max_images=4, clamp=True, increase_log_steps=True,
@@ -29,6 +62,10 @@ class ImageLogger(Callback):
     def log_local(self, save_dir, split, images, global_step, current_epoch, batch_idx, version):
         root = os.path.join(save_dir, "image_logs", f"version_{version}", split)
         for k in images:
+            if k == "control" and images[k].shape[1] != 3:
+                new = images[k].argmax(dim=1)
+                new = decode_segmap(new)
+                images[k] = new
             grid = torchvision.utils.make_grid(images[k], nrow=4)
             if self.rescale:
                 grid = (grid + 1.0) / 2.0  # -1,1 -> 0,1; c,h,w

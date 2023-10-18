@@ -37,8 +37,13 @@ def main(config: ExpConfig):
     model.sd_locked = config.sd_locked
     model.only_mid_control = config.only_mid_control
     model.drop_out_rate = config.drop_out_rate
+    if config.one_hot_labels:
+        orig_conv = model.control_model.input_hint_block[0]
+        model.control_model.input_hint_block[0] = torch.nn.Conv2d(
+            22, orig_conv.out_channels, orig_conv.kernel_size, orig_conv.stride, orig_conv.padding, orig_conv.dilation, orig_conv.groups
+        )
     if embedding is None:
-        model.drop_out_embedding = torch.nn.parameter.Parameter(torch.randn(*config.image_size, 3, requires_grad=True))
+        model.drop_out_embedding = torch.nn.parameter.Parameter(torch.randn(*config.image_size, 22 if config.one_hot_labels else 3, requires_grad=True))
     else:
         model.drop_out_embedding = embedding
     model.drop_out_text = config.drop_out_text
