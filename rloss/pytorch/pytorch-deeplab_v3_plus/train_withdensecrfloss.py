@@ -253,7 +253,9 @@ def main():
     parser.add_argument('--replacement-prob', type=float, default=0.0,
                         help='probability of replacing an image if using aug-scheme=replacement')
     parser.add_argument('--curriculum', type=str, default=None,
-                        help='json of epoch: dataset to use for curriculum learning (default: None)')
+                        help='json string of epoch: dataset to use for curriculum learning (default: None)')
+    parser.add_argument('--ssl-split', type=str, default=None,
+                        help='the SSL split to use (default: None / full dataset)')
     # training hyper params
     parser.add_argument('--epochs', type=int, default=None, metavar='N',
                         help='number of epochs to train (default: auto)')

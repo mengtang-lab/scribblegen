@@ -81,8 +81,7 @@ class VOCSegmentation(Dataset):
             self.aug_ratio = 0
             self.aug_use_all = False
 
-        #_splits_dir = os.path.join(self._base_dir, 'ImageSets', 'Segmentation')
-        _splits_dir = os.path.join(self._base_dir, 'ImageSets', 'SegmentationAug')
+        _splits_dir = os.path.join(self._base_dir, 'SSL_splits')
 
         self.im_ids = []
         self.images = []
@@ -95,8 +94,15 @@ class VOCSegmentation(Dataset):
         self.count = 0 # Number of instances
 
         for splt in self.split:
-            with open(os.path.join(os.path.join(_splits_dir, splt + '.txt')), "r") as f:
-                lines = f.read().splitlines()
+            if args.ssl_split is not None and splt == "train":
+                split_path = os.path.join(_splits_dir, args.ssl_split, 'labeled.txt')
+            else:
+                split_path = os.path.join(_splits_dir, splt + '.txt')
+            lines = []
+            with open(split_path, "r") as f:
+                for line in f.readlines():
+                    id = line.split(' ')[0].split('/')[-1].split('.')[0]
+                    lines.append(id)
 
             for ii, line in enumerate(lines):
                 self.count += 1
