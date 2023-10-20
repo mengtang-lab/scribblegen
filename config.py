@@ -36,3 +36,4 @@ class ExpConfig:
     resume_path: Optional[str] = None
     resume_init_only: bool = False  # whether to use `resume_path` only as a model initializaiton (i.e., don't resume training)
     logger_freq: int = 300
+    save_freq: int = 100  # number of epochs between checkpoints

@@ -1,5 +1,6 @@
 import torch
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 from omegaconf import OmegaConf
 import hydra
 from hydra.core.config_store import ConfigStore
@@ -52,9 +53,11 @@ def main(config: ExpConfig):
     # Set up trainer and data loaders
     train_dataloader, val_dataloader = get_dataloaders(config)
     logger = ImageLogger(batch_frequency=config.logger_freq)
+    checkpointer = ModelCheckpoint(filename='checkpoint-{epoch}', every_n_epochs=config.save_freq, save_top_k=-1)
+    latest_saver = ModelCheckpoint(filename='latest-{epoch}', every_n_epochs=1, save_top_k=1)
     trainer = pl.Trainer(
         precision=32, 
-        callbacks=[logger],
+        callbacks=[logger, checkpointer, latest_saver],
         accumulate_grad_batches=config.accumulate_grad_batches,
         max_epochs=config.max_epochs,
         check_val_every_n_epoch=1, 
