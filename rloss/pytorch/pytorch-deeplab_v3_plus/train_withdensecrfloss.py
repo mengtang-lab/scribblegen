@@ -240,20 +240,18 @@ def main():
                         help='loss func type (default: ce)')
     # adding synthetic data arguments
     parser.add_argument('--aug-scheme', type=str, default='none',
-                        choices=['none', 'normal', 'best', 'synth-only', 'replacement'],
+                        choices=['none', 'append', 'sample', 'synth-only', 'replacement'],
                         help='synthetic data augmentation scheme to use (default: none)')
-    parser.add_argument('--aug-dataset', type=str, default='normal',
+    parser.add_argument('--aug-datasets', type=str, default='normal',
                         help='synthetic datasset to use (default: normal)')
-    parser.add_argument('--aug-ratio', type=int, default=1,
-                        help='ratio of synthetic-to-real images to use (default 1:1)')
-    parser.add_argument('--aug-use-all', action='store_true', default=False,
-                        help='whether to randomly sample from all possible synthetic images (default: False)')
-    parser.add_argument('--aug-best-dict', type=str, default='none',
-                        help='path to dict of ordering to select samples from, needed if aug-scheme=best')
+    parser.add_argument('--aug-best-dict', type=str, default=None,
+                        help='optional path to dict of ordering to select samples from (default: None)')
+    parser.add_argument('--aug-best-k', type=int, default=1,
+                        help='number of the k best images to use, used if aug-best-dict != None')
     parser.add_argument('--replacement-prob', type=float, default=0.0,
-                        help='probability of replacing an image if using aug-scheme=replacement')
+                        help='probability of replacing an image, used if aug-scheme=replacement')
     parser.add_argument('--curriculum', type=str, default=None,
-                        help='json string of epoch: dataset to use for curriculum learning (default: None)')
+                        help='comma separated list of epochs to switch between datasets (default: None)')
     parser.add_argument('--ssl-split', type=str, default=None,
                         help='the SSL split to use (default: None / full dataset)')
     # training hyper params

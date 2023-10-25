@@ -27,6 +27,8 @@ class VOCSegmentation(Dataset):
         :param transform: transform to apply
         """
         super().__init__()
+
+        # Get paths
         self._base_dir = base_dir
         self._image_dir = os.path.join(self._base_dir, 'JPEGImages')
         if split == 'train':
@@ -48,27 +50,21 @@ class VOCSegmentation(Dataset):
 
         self.args = args
         self.debug = debug
-        self.epoch = 0
+
+        # Set up augmentation arguments
         if self.split[0] == 'train':
             self.aug_scheme = args.aug_scheme
-            self.aug_dataset = args.aug_dataset
-            self.aug_ratio = args.aug_ratio
-            self.aug_use_all = args.aug_use_all
+            self.aug_datasets = args.aug_datasets.split(',')
+            self.aug_datasets = [ds.strip() for ds in self.aug_datasets]
             self.replacement_prob = args.replacement_prob
+            self.curriculum_epochs = None
+            self.curriculum_ds = 0
             if args.curriculum is not None:
-                curriculum = json.loads(args.curriculum)
-                epochs = list(curriculum.keys())
-                sets = list(curriculum.values())
-                sort_idx = np.argsort(epochs)
-                self.curriculum_epochs = [int(epochs[idx]) for idx in sort_idx]
-                self.curriculum_sets = [sets[idx] for idx in sort_idx]
-                assert self.aug_ratio == 1
-            else:
-                self.curriculum_epochs = None
-                self.curriculum_sets = None
+                self.curriculum_epochs = [int(epoch.strip()) for epoch in args.curriculum.split(',')]
+                assert len(self.curriculum_epochs) == len(self.aug_datasets)
+                assert self.aug_scheme != "sample", "Curriculum learning doesn't work with random sampling"
             
-            assert self.aug_dataset == 'normal' or (self.aug_ratio == 1 and not self.aug_use_all)
-            if self.aug_scheme == 'best':
+            if args.aug_best_dict is not None:
                 path = os.path.join(self._base_dir, args.aug_best_dict)
                 assert os.path.isfile(path), f"No json file at {path}"
                 with open(path, 'r') as f:
@@ -76,10 +72,10 @@ class VOCSegmentation(Dataset):
             else:
                 selection_dict = None
         else:
-            self.aug_scheme = False
-            self.aug_dataset = None
-            self.aug_ratio = 0
-            self.aug_use_all = False
+            self.aug_scheme = None
+            self.aug_datasets = []
+            self.curriculum_epochs = None
+        self._epoch = 0
 
         _splits_dir = os.path.join(self._base_dir, 'SSL_splits')
 
@@ -89,11 +85,11 @@ class VOCSegmentation(Dataset):
         self.full_categories = []
         self.dataset_nums = [] # -1 for real and i for ith synthetic dataset
 
-        self.data = []
+        self.real_data = []
         self.synth_data = []
-        self.count = 0 # Number of instances
 
         for splt in self.split:
+            # Get the image IDs
             if args.ssl_split is not None and splt == "train":
                 split_path = os.path.join(_splits_dir, args.ssl_split, 'labeled.txt')
             else:
@@ -104,8 +100,7 @@ class VOCSegmentation(Dataset):
                     id = line.split(' ')[0].split('/')[-1].split('.')[0]
                     lines.append(id)
 
-            for ii, line in enumerate(lines):
-                self.count += 1
+            for line in lines:
                 if args.aug_scheme != 'synth-only' or splt == 'val':
                     # Add real data
                     _image = os.path.join(self._image_dir, line + ".jpg")
@@ -114,40 +109,28 @@ class VOCSegmentation(Dataset):
                     assert os.path.isfile(_image), f'no image at {_image}'
                     assert os.path.isfile(_cat), f'no label at {_cat}'
                     assert os.path.isfile(_full_cat), f'no label at {_full_cat}'
-                    self.data.append((line, _image, _cat, _full_cat, -1))
+                    self.real_data.append((line, _image, _cat, _full_cat, -1))
 
-                # To use synthetic images too:
                 if split == 'train' and args.aug_scheme != 'none':
-                    self.synth_data.append(self._add_synthetic(line, selection_dict))
+                    # Add synthetic data
+                    self.synth_data.append(self._add_synthetic(line, selection_dict, args.aug_best_k))
 
         # Display stats
-        print('Number of images in {}: {:d} ({:d} are real)'.format(split, len(self), len(self.data)))
+        print(f'Number of images in {split}: {len(self)} ({len(self.real_data)} are real)')
 
 
-    def _add_synthetic(self, line, selection_dict=None):
+    def _add_synthetic(self, line, selection_dict=None, best_k=1):
         # Returns list of (image id, image path, label, full label, dataset used)
         if self.aug_scheme == 'none':
-            return [], []
+            return []
         data = []
-        if self.aug_use_all:
-            num_datasets = 8
-        elif self.curriculum_sets is not None:
-            num_datasets = len(self.curriculum_sets)
-        else:
-            num_datasets = self.aug_ratio
-        for i in range(num_datasets):
+        for i, ds in enumerate(self.aug_datasets):
             label_type = 'scribble' if self.args.scribbles else 'full'
-            if self.curriculum_sets is None:
-                if selection_dict is not None: # Only useful if aug_use_all = False
-                    # Pick the dataset to use based on ordering in the selection dict
-                    dataset = selection_dict[line][i]
-                else:
-                    # Naively pick ith synthetic image from ith dataset
-                    dataset = i + 1
-                synth_dir = os.path.join(self._synth_dir, f'{label_type}_{self.aug_dataset}_{dataset}')
-            else:
-                synth_dir = os.path.join(self._synth_dir, f'{label_type}_{self.curriculum_sets[i]}_1')
-                dataset = i + 1
+            if selection_dict is not None:
+                if i > best_k:
+                    break
+                ds = selection_dict[line][i]
+            synth_dir = os.path.join(self._synth_dir, f'{label_type}_{ds}')
             _id = line
             _image = os.path.join(synth_dir, line + ".jpeg")
             _cat = os.path.join(self._cat_dir, line + ".png")
@@ -155,17 +138,37 @@ class VOCSegmentation(Dataset):
             assert os.path.isfile(_image), f'no image at {_image}'
             assert os.path.isfile(_cat), f'no label at {_cat}'
             assert os.path.isfile(_full_cat), f'no label at {_full_cat}'
-            data.append((_id, _image, _cat, _full_cat, dataset))
+            data.append((_id, _image, _cat, _full_cat, ds))
         return data
 
 
     def __len__(self):
-        if self.aug_scheme == 'none' or self.aug_scheme == 'replacement':
-            return self.count
+        if self.aug_scheme == 'none' or self.aug_scheme == 'replacement' or self.split[0] != 'train':
+            return len(self.real_data)
+        elif self.curriculum_epochs is not None and self.aug_scheme == 'append':
+            return len(self.real_data) + len(self.synth_data)
+        elif self.aug_scheme == 'append':
+            return len(self.real_data) + len(self.synth_data) * len(self.aug_datasets)
+        elif self.aug_scheme == 'sample':
+            return len(self.real_data) + len(self.synth_data)
         elif self.aug_scheme == 'synth-only':
-            return self.aug_ratio * self.count
+            return len(self.synth_data) * len(self.aug_datasets)
         else:
-            return (1 + self.aug_ratio) * self.count
+            raise NotImplementedError()
+
+    @property
+    def epoch(self):
+        return self._epoch
+    
+    @epoch.setter
+    def epoch(self, val):
+        self._epoch = val
+        idx = 0
+        while idx != len(self.curriculum_epochs) and self.epoch >= self.curriculum_epochs[idx]:
+            idx += 1
+        if idx != self.curriculum_ds:
+            self.curriculum_ds = idx - 1
+            print(f"Now using dataset {self.curriculum_ds}: {self.aug_datasets[self.curriculum_ds]}")
 
 
     def __getitem__(self, index):
@@ -185,44 +188,61 @@ class VOCSegmentation(Dataset):
 
 
     def _make_img_gt_point_pair(self, index):
-        if index < len(self.data) and self.aug_scheme != 'synth-only':
-            if self.aug_scheme == 'replacement':
-                prob = torch.rand((1, )).item()
-                if prob <= self.replacement_prob:
-                    if self.curriculum_epochs is not None:
-                        instance_idx = 0
-                        while instance_idx != len(self.curriculum_epochs) and self.epoch >= self.curriculum_epochs[instance_idx]:
-                            instance_idx += 1
-                        instance_idx -= 1
-                    else:
-                        instance_idx = 0
-                    _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[index][instance_idx]
-                else:
-                    _id, _img_path, _target_path, _full_target_path, _dataset = self.data[index]
+        image_index = None
+        dataset_index = None
+
+        if self.aug_scheme == 'none' or self.split[0] == 'val':
+            use_real = True
+
+        elif self.aug_scheme == 'append':
+            if index < len(self.real_data):
+                use_real = True
             else:
-                _id, _img_path, _target_path, _full_target_path, _dataset = self.data[index]
-        elif self.aug_use_all:
-            # img_idx is the index of the image of Pascal to load
-            # instance_idx is the index of which instance of the synthetic recreation of that image to use
-            img_idx = index % self.count
-            instance_idx = torch.randint(8, (1, )).item()
-            _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[img_idx][instance_idx]
+                use_real = False
+                image_index = index % len(self.real_data)
+                if self.curriculum_epochs is not None:
+                    dataset_index = self.curriculum_ds
+                else:
+                    dataset_index = (index // len(self.real_data)) - 1
+
+        elif self.aug_scheme == 'sample':
+            if index < len(self.real_data):
+                use_real = True
+            else:
+                use_real = False
+                image_index = index % len(self.real_data)
+                dataset_index = torch.randint(len(self.aug_datasets), (1, )).item()
+
+        elif self.aug_scheme == 'synth-only':
+            use_real = False
+            image_index = index % len(self.synth_data)
+            dataset_index = index // len(self.synth_data)
+
+        elif self.aug_scheme == 'replacement':
+            prob = torch.rand((1, )).item()
+            if prob <= self.replacement_prob:  # Replace with synth image
+                use_real = False
+                image_index = index
+                if self.curriculum_epochs is not None:
+                    dataset_index = self.curriculum_ds
+                else:  # Otherwise sample which dataset to use
+                    dataset_index = torch.randint(len(self.aug_datasets), (1, )).item()
+            else:  # Don't replace
+                use_real = True
+
         else:
-            img_idx = index % self.count
-            instance_idx = index // self.count
-            if self.curriculum_epochs is not None:
-                instance_idx = 0
-                while instance_idx != len(self.curriculum_epochs) and self.epoch >= self.curriculum_epochs[instance_idx]:
-                    instance_idx += 1
-                instance_idx -= 1
-            elif self.aug_scheme != 'synth-only':
-                instance_idx -= 1 # shift down since first `self.count` images are real not synth
-            _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[img_idx][instance_idx]
+            raise NotImplementedError()
+
+        if use_real:
+            _id, _img_path, _target_path, _full_target_path, _dataset = self.real_data[index]
+            dataset_index = -1
+        else:
+            _id, _img_path, _target_path, _full_target_path, _dataset = self.synth_data[image_index][dataset_index]
         _img = Image.open(_img_path).convert('RGB')
         _target = Image.open(_target_path)
         _full_target = Image.open(_full_target_path)
 
-        return _img, _target, _full_target, _id, _dataset, _img_path
+        return _img, _target, _full_target, _id, dataset_index, _img_path
 
     def transform_tr(self, sample):
         composed_transforms = transforms.Compose([

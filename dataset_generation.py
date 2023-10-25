@@ -36,6 +36,8 @@ def main():
                         help='batch size to use for inference')
     args = parser.parse_args()
 
+    print(args)
+
     device = torch.device(f'cuda:{args.gpu_id}')
     dataset = PascalScribbleDataset(train=True, class_hint=args.add_hint, split_path=args.split)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
