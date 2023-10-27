@@ -10,3 +10,5 @@ temp*
 *.ipynb
 .hydra/
 .vscode/
+
+run_exp.sh
