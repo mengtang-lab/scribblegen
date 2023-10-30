@@ -1,0 +1,1 @@
+python3 -u run_exp.py --configs configs/voc2012/R_101_D_32.json --gathered n --loss_balance y --backbone deepbase_resnet101 --model_name treefcn --gpus 0 --loss_type fs_ce_loss --epochs 60 --pretrained ./pretrained/resnet101-imagenet.pth --nbb_mult 10.0 --sigma 0.02
