@@ -1,6 +1,5 @@
 from typing import OrderedDict
 import torch
-from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 
 from lib.utils.tools.configer import Configer
@@ -8,10 +7,10 @@ from lib.models.model_manager import ModelManager
 from lib.loss.loss_manager import LossManager
 from segmentor.tools.optim_scheduler import OptimScheduler
 from lib.utils.lighting_utils import group_weight, get_parameters, load_state_dict, Evaluator
-from data.pascal import VOCSegmentation
 
 class LightningTEL(pl.LightningModule):
     def __init__(self, configer: Configer):
+        super().__init__()
         self.configer = configer
 
         model_manager = ModelManager(configer)
@@ -49,22 +48,6 @@ class LightningTEL(pl.LightningModule):
             params_group = get_parameters(self.seg_net, configer)
         self.optimizer, self.scheduler = optim_scheduler.init_optimizer(params_group)
 
-        train_ds = VOCSegmentation(configer, split='train')
-        val_ds = VOCSegmentation(configer, split='val')
-        train_dl = DataLoader(
-            train_ds, 
-            batch_size=configer.get('data', 'train_batch_size'),
-            shuffle=True,
-            num_workers=configer.get('data', 'workers'),
-        )
-        val_dl = DataLoader(
-            val_ds, 
-            batch_size=configer.get('data', 'val_batch_size'),
-            shuffle=False,
-            num_workers=configer.get('data', 'workers'),
-        )
-        self.train_dataloader = lambda: train_dl
-        self.val_dataloader = lambda: val_dl
         self.nclass = 21
 
         loss_manager = LossManager(configer)
@@ -86,9 +69,9 @@ class LightningTEL(pl.LightningModule):
 
         # with torch.cuda.amp.autocast():
         outputs = self.seg_net(aug_imgs)
-        # -2: padded pixels;  -1: unlabeled pixels
-        unlabeled_RoIs = (targets == -1)
-        targets[targets < -1] = -1
+        # set out of range pixels to -1 (unlabeled)
+        unlabeled_RoIs = (targets > self.nclass)
+        targets[targets > self.nclass] = -1
 
         seg_loss = self.pixel_loss([outputs[0]], targets)
         tree_loss = self.tree_loss(outputs[1], orig_imgs, outputs[2], unlabeled_RoIs)
@@ -97,45 +80,46 @@ class LightningTEL(pl.LightningModule):
         self.log("train/seg_loss", seg_loss)
         self.log("train/tree_loss", tree_loss)
         self.log("train/total_loss", loss)
+        self.log("train/lr0", self.scheduler.get_last_lr()[0])
+        self.log("train/lr1", self.scheduler.get_last_lr()[1])
+
+        return loss
     
     def validation_step(self, batch, _):
         aug_imgs = batch["aug_imgs"]
-        orig_imgs = batch["orig_imgs"]
         targets = batch["targets"]
 
         # with torch.cuda.amp.autocast():
         outputs = self.seg_net(aug_imgs)
-        # -2: padded pixels;  -1: unlabeled pixels
-        unlabeled_RoIs = (targets == -1)
-        targets[targets < -1] = -1
+        # set out of range pixels to -1 (unlabeled)
+        targets[targets > self.nclass] = -1
 
-        seg_loss = self.pixel_loss([outputs[0]], targets)
-        tree_loss = self.tree_loss(outputs[1], orig_imgs, outputs[2], unlabeled_RoIs)
-        loss = seg_loss + tree_loss
+        loss = self.pixel_loss(
+            outputs, targets, 
+            gathered=self.configer.get('network', 'gathered')
+        )
 
-        self.log("val/seg_loss", seg_loss)
-        self.log("val/tree_loss", tree_loss)
-        self.log("val/total_loss", loss)
+        self.log("val/loss", loss)
         
         self.validation_step_outputs.append((outputs[0], targets))
 
     def on_validation_epoch_end(self):
         evaluator = Evaluator(self.nclass)
 
-        for pred, target in enumerate(self.validation_step_outputs):
+        for pred, target in self.validation_step_outputs:
             pred = torch.argmax(pred, dim=1)
             pred = pred.cpu().numpy()
             target = target.cpu().numpy()
             evaluator.add_batch(target, pred)
 
-        Acc = self.evaluator.Pixel_Accuracy()
-        Acc_class = self.evaluator.Pixel_Accuracy_Class()
-        mIoU = self.evaluator.Mean_Intersection_over_Union()
-        FWIoU = self.evaluator.Frequency_Weighted_Intersection_over_Union()
-        self.log('val/mIoU', mIoU)
-        self.log('val/Acc', Acc)
-        self.log('val/Acc_class', Acc_class)
-        self.log('val/fwIoU', FWIoU)
+        Acc = evaluator.Pixel_Accuracy()
+        Acc_class = evaluator.Pixel_Accuracy_Class()
+        mIoU = evaluator.Mean_Intersection_over_Union()
+        FWIoU = evaluator.Frequency_Weighted_Intersection_over_Union()
+        self.log('val/mIoU', mIoU, sync_dist=True)
+        self.log('val/Acc', Acc, sync_dist=True)
+        self.log('val/Acc_class', Acc_class, sync_dist=True)
+        self.log('val/fwIoU', FWIoU, sync_dist=True)
         
         self.validation_step_outputs.clear()
         

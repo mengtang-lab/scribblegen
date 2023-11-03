@@ -29,6 +29,16 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
+        {
+            "name": "Python TEL",
+            "type": "python",
+            "request": "launch",
+            "program": "~/scribblegen/TreeEnergyLoss/run_exp.py",
+            "console": "integratedTerminal",
+            "cwd": "~/scribblegen/TreeEnergyLoss/",
+            "justMyCode": true,
+            "args": ["--configs", "configs/voc2012/R_101_D_32.json", "--gathered", "n", "--loss_balance", "y", "--backbone", "deepbase_resnet101", "--model_name", "treefcn", "--gpus", "0", "--loss_type", "fs_ce_loss", "--pretrained", "./pretrained/resnet101-imagenet.pth", "--nbb_mult", "10.0", "--sigma", "0.02", "--log_dir", "./run", "--epochs", "60", "--train_batch_size", "2"],
+        },
     ]
 }

@@ -8,12 +8,14 @@ import random
 
 import torch
 import torch.backends.cudnn as cudnn
+from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from lib.utils.tools.logger import Logger as Log
 from lib.utils.tools.configer import Configer
 from lightning_tel import LightningTEL
+from data.pascal import VOCSegmentation
 
 # This file constructs the `configer` required for much of TEL
 
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument('--configs', default=None, type=str,
                         dest='configs', help='The file of the hyper parameters.')
     parser.add_argument('--gpus', default=[0], nargs='+', type=int,
-                        dest='gpus', help='The gpu list used.')
+                        dest='gpu', help='The gpu list used.')
 
     # ***********  Params for TEL.  ***********
     parser.add_argument('--sigma', default=None, type=float,
@@ -49,28 +51,28 @@ if __name__ == "__main__":
                         help='base image size')
     parser.add_argument('--crop-size', type=int, default=513, dest='data:crop_size',
                         help='crop image size')
+    parser.add_argument('--workers', default=None, type=int,
+                        dest='data:workers', help='The number of workers to load data.')
+    parser.add_argument('--train_batch_size', default=1, type=int,
+                        dest='data:train_batch_size', help='The batch size of training.')
+    parser.add_argument('--val_batch_size', default=1, type=int,
+                        dest='data:val_batch_size', help='The batch size of validation.')
 
-    parser.add_argument('--aug-scheme', type=str, default='none', dest='data:aug_scheme',
+    parser.add_argument('--aug_scheme', type=str, default='none', dest='data:aug_scheme',
                         choices=['none', 'append', 'sample', 'synth-only', 'replacement'],
                         help='synthetic data augmentation scheme to use (default: none)')
-    parser.add_argument('--aug-datasets', type=str, default='normal', dest='data:aug_datasets',
+    parser.add_argument('--aug_datasets', type=str, default='normal', dest='data:aug_datasets',
                         help='synthetic datasset to use (default: normal)')
-    parser.add_argument('--aug-best-dict', type=str, default=None, dest='data:aug_best_dict',
+    parser.add_argument('--aug_best_dict', type=str, default=None, dest='data:aug_best_dict',
                         help='optional path to dict of ordering to select samples from (default: None)')
-    parser.add_argument('--aug-best-k', type=int, default=1, dest='data:aug_best_k',
+    parser.add_argument('--aug_best_k', type=int, default=1, dest='data:aug_best_k',
                         help='number of the k best images to use, used if aug-best-dict != None')
-    parser.add_argument('--replacement-prob', type=float, default=0.0, dest='data:replacement_prob',
+    parser.add_argument('--replacement_prob', type=float, default=0.0, dest='data:replacement_prob',
                         help='probability of replacing an image, used if aug-scheme=replacement')
     parser.add_argument('--curriculum', type=str, default=None, dest='data:curriculum',
                         help='comma separated list of epochs to switch between datasets (default: None)')
-    parser.add_argument('--ssl-split', type=str, default=None, dest='data:ssl_split',
+    parser.add_argument('--ssl_split', type=str, default=None, dest='data:ssl_split',
                         help='the SSL split to use (default: None / full dataset)')
-    parser.add_argument('--workers', default=None, type=int,
-                        dest='data:workers', help='The number of workers to load data.')
-    parser.add_argument('--train_batch_size', default=None, type=int,
-                        dest='train:batch_size', help='The batch size of training.')
-    parser.add_argument('--val_batch_size', default=None, type=int,
-                        dest='val:batch_size', help='The batch size of validation.')
 
     # ***********  Params for model.  **********
     parser.add_argument('--model_name', default=None, type=str,
@@ -119,12 +121,12 @@ if __name__ == "__main__":
                         dest='meta:log_dir', help='The root dir of model save path and tb log path.')
     parser.add_argument('--save_iters', default=None, type=int,
                         dest='meta:save_iters', help='The saving iters of checkpoint model.')
-    parser.add_argument('--save_epoch', default=1, type=int,
+    parser.add_argument('--save_epoch', default=10, type=int,
                         dest='meta:save_epoch', help='The saving epoch of checkpoint model.')
-    parser.add_argument('--epochs', default=None, type=int,
-                        dest='meta:max_epoch', help='The max epoch of training.')
-    parser.add_argument('--iters', default=None, type=int,
-                        dest='meta:max_iters', help='The max iters of training.')
+    parser.add_argument('--epochs', default=-1, type=int,
+                        dest='meta:epochs', help='The max epoch of training.')
+    parser.add_argument('--iters', default=-1, type=int,
+                        dest='solver:max_iters', help='The max iters of training.')
     parser.add_argument('--val_interval', default=2, type=int,
                         dest='meta:val_interval', help='The test interval of validation.')
 
@@ -146,14 +148,33 @@ if __name__ == "__main__":
     configer = Configer(args_parser=args_parser)
     assert configer.get('meta', 'log_dir') is not None
     assert (configer.get('meta', 'save_epoch') is None) != (configer.get('meta', 'save_iters') is None), "Exactly one of save_epoch or save_iters must be set"
-    assert (configer.get('meta', 'epochs') is None) != (configer.get('meta', 'epochs') is None), "Exactly one of epochs or iters must be set"
+    assert (configer.get('meta', 'epochs') == -1) != (configer.get('solver', 'max_iters') == -1), "Exactly one of epochs or iters must be set"
+
+    train_ds = VOCSegmentation(configer, split='train')
+    val_ds = VOCSegmentation(configer, split='val')
+    train_dl = DataLoader(
+        train_ds, 
+        batch_size=configer.get('data', 'train_batch_size'),
+        shuffle=True,
+        num_workers=configer.get('data', 'workers'),
+    )
+    val_dl = DataLoader(
+        val_ds, 
+        batch_size=configer.get('data', 'val_batch_size'),
+        shuffle=False,
+        num_workers=configer.get('data', 'workers'),
+    )
+
+    if configer.get('meta', 'epochs') != -1:
+        num_iters = len(train_dl) * configer.get('meta', 'epochs') + 1
+        configer.update(('solver', 'max_iters'), num_iters)
 
     lit_tel_model = LightningTEL(configer)
 
     checkpointer = ModelCheckpoint(
         filename=f'checkpoint-{{epoch}}', 
-        every_n_epochs=configer('meta', 'save_epoch'), 
-        every_n_train_steps=configer('meta', 'save_iters'),
+        every_n_epochs=configer.get('meta', 'save_epoch'), 
+        every_n_train_steps=configer.get('meta', 'save_iters'),
         save_top_k=-1
     )
     latest_saver = ModelCheckpoint(filename='latest-{epoch}', every_n_epochs=1, save_top_k=1)
@@ -161,13 +182,18 @@ if __name__ == "__main__":
         precision=32, 
         callbacks=[checkpointer, latest_saver],
         max_epochs=configer.get('meta', 'epochs'),
-        max_steps=configer.get('meta', 'iters'),
         check_val_every_n_epoch=configer.get('meta', 'val_interval'),
         default_root_dir=configer.get('meta', 'log_dir'),
         logger=True,
         accelerator='gpu',
-        strategy='ddp',
-        devices=configer.get('gpus'),
+        strategy=pl.strategies.DDPStrategy(find_unused_parameters=False),
+        devices=configer.get('gpu'),
     )
 
-    trainer.fit(lit_tel_model)
+    os.makedirs(trainer.logger.log_dir, exist_ok=True)
+
+    trainer.fit(
+        lit_tel_model,
+        train_dataloaders=train_dl,
+        val_dataloaders=val_dl,
+    )
