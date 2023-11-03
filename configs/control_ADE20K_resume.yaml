@@ -1,0 +1,14 @@
+defaults:
+  - base
+  - _self_
+
+max_epochs: 500
+batch_size: 16
+learning_rate: 1e-4
+dataset: ADE20K
+drop_out_rate: 0.1
+
+gpus: [3]
+log_dir: ./logs/ADE20K
+logger_freq: 200
+resume_path: ./logs/ADE20K/lightning_logs/version_0/checkpoints/latest-epoch=132.ckpt

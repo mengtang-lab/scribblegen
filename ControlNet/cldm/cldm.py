@@ -318,7 +318,7 @@ class ControlLDM(LatentDiffusion):
         self.use_tqdm = control_stage_config['params']['tqdm_for_sample']
         # Manually change these in `train.py`
         self.drop_out_rate = 0
-        self.drop_out_embedding = None
+        self.drop_out_embedding = torch.nn.parameter.Parameter(torch.randn(512, 512, 3, requires_grad=True))
         self.drop_out_text = None
 
     @torch.no_grad()

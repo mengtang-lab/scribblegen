@@ -50,9 +50,6 @@ def main():
     model = create_model(model_config_path).to(device)
     embedding = None
     state_dict = load_state_dict(args.checkpoint, location=device)
-    if 'drop_out_embedding' in state_dict.keys():
-        embedding = state_dict['drop_out_embedding']
-        del state_dict['drop_out_embedding']
     model.load_state_dict(state_dict)
     model.drop_out_embedding = embedding
     model.cond_stage_model.device = device

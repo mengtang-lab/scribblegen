@@ -25,12 +25,8 @@ def main(config: ExpConfig):
 
     # First use cpu to load models. Pytorch Lightning will automatically move it to GPUs.
     model = create_model(config.model_config_path).cpu()
-    embedding = None
     if config.resume_path is not None:
         state_dict = load_state_dict(config.resume_path, location="cpu")
-        if 'drop_out_embedding' in state_dict.keys():
-            embedding = state_dict['drop_out_embedding']
-            del state_dict['drop_out_embedding']
         model.load_state_dict(state_dict)
     else:
         model.load_state_dict(load_state_dict(config.model_path, location='cpu'))
@@ -43,10 +39,6 @@ def main(config: ExpConfig):
         model.control_model.input_hint_block[0] = torch.nn.Conv2d(
             22, orig_conv.out_channels, orig_conv.kernel_size, orig_conv.stride, orig_conv.padding, orig_conv.dilation, orig_conv.groups
         )
-    if embedding is None:
-        model.drop_out_embedding = torch.nn.parameter.Parameter(torch.randn(*config.image_size, 22 if config.one_hot_labels else 3, requires_grad=True))
-    else:
-        model.drop_out_embedding = embedding
     model.drop_out_text = config.drop_out_text
 
 
