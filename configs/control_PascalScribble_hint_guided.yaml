@@ -9,6 +9,6 @@ dataset: PascalScribble
 class_hint: true
 drop_out_rate: 0.1
 
-gpus: [0]
+gpus: [2, 3]
 log_dir: ./logs/PascalScribble
 logger_freq: 200

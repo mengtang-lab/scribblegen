@@ -24,6 +24,8 @@ def main():
                         help='dataset to run inference on')
     parser.add_argument('--add-hint', action='store_true', default=False,
                         help='whether to add class hints to prompts')
+    parser.add_argument('--one-hot', action='store_true', default=False,
+                        help='whether to use onehot scribbles')
     parser.add_argument('--guidance-scale', type=float, default=9.,
                         help='scale between unconditioned and conditioned model output')
     parser.add_argument('--num-steps', type=int, default=50,
@@ -39,7 +41,7 @@ def main():
     print(args)
 
     device = torch.device(f'cuda:{args.gpu_id}')
-    dataset = PascalScribbleDataset(train=True, class_hint=args.add_hint, split_path=args.split)
+    dataset = PascalScribbleDataset(train=True, class_hint=args.add_hint, split_path=args.split, one_hot_labels=args.one_hot)
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
     out_dir = args.out_dir
 
@@ -48,10 +50,19 @@ def main():
     assert len(os.listdir(out_dir)) == 0
 
     model = create_model(model_config_path).to(device)
-    embedding = None
+    if args.one_hot:
+        orig_conv = model.control_model.input_hint_block[0]
+        model.control_model.input_hint_block[0] = torch.nn.Conv2d(
+            22, orig_conv.out_channels, orig_conv.kernel_size, orig_conv.stride, orig_conv.padding, orig_conv.dilation, orig_conv.groups
+        ).to(device)
+        model.drop_out_embedding = torch.nn.parameter.Parameter(torch.randn(512, 512, 22))
     state_dict = load_state_dict(args.checkpoint, location=device)
-    model.load_state_dict(state_dict)
-    model.drop_out_embedding = embedding
+    if "drop_out_embedding" not in state_dict:
+        state_dict["drop_out_embedding"] = torch.randn(512, 512, 3)
+        model.load_state_dict(state_dict)
+        model.drop_out_embedding = None
+    else:
+        model.load_state_dict(state_dict)
     model.cond_stage_model.device = device
     model.eval()
 

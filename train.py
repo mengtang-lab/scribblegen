@@ -29,7 +29,7 @@ def main(config: ExpConfig):
         state_dict = load_state_dict(config.resume_path, location="cpu")
         model.load_state_dict(state_dict)
     else:
-        model.load_state_dict(load_state_dict(config.model_path, location='cpu'))
+        model.load_state_dict(load_state_dict(config.model_path, location='cpu'), strict=False)
     model.learning_rate = config.learning_rate
     model.sd_locked = config.sd_locked
     model.only_mid_control = config.only_mid_control

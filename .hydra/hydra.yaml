@@ -120,7 +120,7 @@ hydra:
     override_dirname: ''
     id: ???
     num: ???
-    config_name: control_PascalScribble_onehot
+    config_name: control_PascalScribble_hint_guided
     env_set: {}
     env_copy: []
     config:
