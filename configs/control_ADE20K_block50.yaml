@@ -1,0 +1,15 @@
+defaults:
+  - base
+  - _self_
+
+max_epochs: 200
+batch_size: 16
+learning_rate: 1e-4
+dataset: ADE20K_Block50
+drop_out_rate: 0.1
+class_hint: true
+
+gpus: [0, 1, 2, 3]
+log_dir: ./logs/ADE20K_Block50
+logger_freq: 500
+save_freq: 200

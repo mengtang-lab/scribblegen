@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--gpu-id', type=int, default=0,
                         help='which gpu to use for inference')
     parser.add_argument('--dataset', type=str, default='PascalScribble',
-                        choices=['ADE20K', 'PascalSegmentation', 'PascalScribble'],
+                        choices=['ADE20K', 'ADE20K_Block50', 'PascalSegmentation', 'PascalScribble'],
                         help='dataset to run inference on')
     parser.add_argument('--add-hint', action='store_true', default=False,
                         help='whether to add class hints to prompts')
@@ -36,12 +36,17 @@ def main():
                         help='path to split of images to use')
     parser.add_argument('--batch-size', type=int, default=1,
                         help='batch size to use for inference')
+    parser.add_argument('--validation', action='store_true', default=False,
+                        help="whether to run on the validation set")
     args = parser.parse_args()
 
     print(args)
 
     device = torch.device(f'cuda:{args.gpu_id}')
-    dataset = PascalScribbleDataset(train=True, class_hint=args.add_hint, split_path=args.split, one_hot_labels=args.one_hot)
+    if args.dataset == 'PascalScribble':
+        dataset = PascalScribbleDataset(train=(not args.validation), class_hint=args.add_hint, split_path=args.split, one_hot_labels=args.one_hot)
+    elif args.dataset == 'ADE20K_Block50':
+        dataset = ADE20KDataset(train=(not args.validation), class_hint=args.add_hint, labels="ade20k_blocks_colored/block50")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size)
     out_dir = args.out_dir
 
@@ -80,7 +85,8 @@ def main():
         imgs = np.moveaxis(imgs, 1, -1)
         imgs = (imgs + 1) / 2
         imgs = (imgs * 255).astype(np.uint8)
-        imgs = imgs[...,::-1]
+        if args.dataset == "PascalScribble":
+            imgs = imgs[...,::-1]
         print(imgs.shape)
 
         for i, img in enumerate(imgs):

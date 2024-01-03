@@ -12,7 +12,7 @@ from torch.utils.data import Dataset, DataLoader
 from utils import loadAde20K
 from config import DatasetEnum, ExpConfig
 
-class ADE20KDataset(Dataset):
+class Old_ADE20KDataset(Dataset):
     def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False):
         self.DATASET_PATH = '/mnt/ADE20K'
         index_file = 'ADE20K_2021_17_01/index_ade20k.pkl'
@@ -57,6 +57,53 @@ class ADE20KDataset(Dataset):
         target = (target.astype(np.float32) / 127.5) - 1.0
 
         return dict(jpg=target, txt=self.default_prompt, hint=source)
+
+class ADE20KDataset(Dataset):
+    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False, class_hint: bool = False, labels: str = "annotations/training"):
+        self.DATASET_PATH = '/mnt/data1/ADEChallengeData2016/'
+        self.image_dir = os.path.join(self.DATASET_PATH, 'images', 'training' if train else 'validation')
+        self.annotation_dir = os.path.join(self.DATASET_PATH, labels)
+        self.class_dir = os.path.join(self.DATASET_PATH, "classes")
+
+        self.ids = os.listdir(self.image_dir)
+        self.ids = list(map(lambda x: x.split('.')[0], self.ids))
+        if overfit:
+            self.ids = self.ids[:100]
+
+        self.size = size
+        self.default_prompt = "a high-quality, detailed, and professional image"
+        self.class_hint = class_hint
+
+    def __len__(self) -> int:
+        return len(self.ids)
+
+    def __getitem__(self, idx: int) -> Dict:
+        source_path = os.path.join(self.annotation_dir, f"{self.ids[idx]}.png")
+        target_path = os.path.join(self.image_dir, f"{self.ids[idx]}.jpg")
+
+        source = cv2.imread(source_path)
+        target = cv2.imread(target_path)
+
+        # Do not forget that OpenCV read images in BGR order.
+        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+
+        # Resize
+        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+        target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
+
+        # Normalize source images to [0, 1].
+        source = source.astype(np.float32) / 255.0
+        # Normalize target images to [-1, 1].
+        target = (target.astype(np.float32) / 127.5) - 1.0
+
+        prompt = self.default_prompt
+        if self.class_hint:
+            with open(os.path.join(self.class_dir, f"{self.ids[idx]}.txt"), 'r') as f:
+                classes = f.read()
+            prompt += " of " + classes
+
+        return dict(jpg=target, txt=prompt, hint=source, name=self.ids[idx])
 
 
 class PascalSegmentationDataset(Dataset):
@@ -164,7 +211,7 @@ class PascalScribbleDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Dict:
         file_name = self.image_names[idx]
-        target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpg"
+        target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpeg"
 
         target = cv2.imread(target_path)[:,:,::-1]
         target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
@@ -198,8 +245,23 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
     val_ds: Dataset
     if config.dataset.value == DatasetEnum.ADE20K.value:
         train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
-        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit)
-        assert len(train_ds) + len(val_ds) == 27258 or config.overfit
+        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
+        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
+    
+    if config.dataset.value == DatasetEnum.ADE20K_Block10.value:
+        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit, labels="ade20k_blocks_colored/block10", class_hint=config.class_hint)
+        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
+        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
+
+    if config.dataset.value == DatasetEnum.ADE20K_Block20.value:
+        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit, labels="ade20k_blocks_colored/block20", class_hint=config.class_hint)
+        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
+        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
+
+    if config.dataset.value == DatasetEnum.ADE20K_Block50.value:
+        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit, labels="ade20k_blocks_colored/block50", class_hint=config.class_hint)
+        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
+        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
 
     elif config.dataset.value == DatasetEnum.PascalSegmentation.value:
         train_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
@@ -217,7 +279,7 @@ def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
         assert len(train_ds) + len(val_ds) == 12031 or config.overfit or config.split_path
 
     else:
-        raise NotImplementedError
+        raise NotImplementedError(f"{config.dataset} not added")
     
     print(f"Train dataset has {len(train_ds)} images")
     print(f"Val dataset has {len(val_ds)} images")

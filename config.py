@@ -5,8 +5,12 @@ from omegaconf import OmegaConf, MISSING
 
 class DatasetEnum(Enum):
     ADE20K = 0
-    PascalSegmentation = 1
-    PascalScribble = 2
+    ADE20K_Block10 = 1
+    ADE20K_Block20 = 2
+    ADE20K_Block50 = 3
+    PascalSegmentation = 4
+    PascalScribble = 5
+    count = 6
 
 @dataclass
 class ExpConfig:

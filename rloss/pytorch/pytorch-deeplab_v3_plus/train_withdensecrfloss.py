@@ -143,9 +143,9 @@ class Trainer(object):
             self.writer.add_scalar('train/total_loss_iter', loss.item(), i + num_img_tr * epoch)
 
             # Show 10 * 3 inference results each epoch
-            if i % (num_img_tr // 10) == 0:
-                global_step = i + num_img_tr * epoch
-                self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
+            # if i % (num_img_tr // 10) == 0:
+            #     global_step = i + num_img_tr * epoch
+            #     self.summary.visualize_image(self.writer, self.args.dataset, image, target, output, global_step)
 
         self.writer.add_scalar('train/total_loss_epoch', train_loss, epoch)
         print('[Epoch: %d, numImages: %5d]' % (epoch, i * self.args.batch_size + image.data.shape[0]))
@@ -219,7 +219,7 @@ def main():
     parser.add_argument('--out-stride', type=int, default=16,
                         help='network output stride (default: 8)')
     parser.add_argument('--dataset', type=str, default='pascal',
-                        choices=['pascal', 'coco', 'cityscapes'],
+                        choices=['pascal', 'coco', 'cityscapes', 'ade'],
                         help='dataset name (default: pascal)')
     parser.add_argument('--scribbles', action='store_true', default=False,
                         help='whether to use scribbles as labels (default: False)')
@@ -246,6 +246,8 @@ def main():
                         help='synthetic datasset to use (default: normal)')
     parser.add_argument('--aug-best-dict', type=str, default=None,
                         help='optional path to dict of ordering to select samples from (default: None)')
+    parser.add_argument('--aug-blocks', type=str, default=None,
+                        help='type of block supervision to use for ADE20K (default: None, i.e., full)')
     parser.add_argument('--aug-best-k', type=int, default=1,
                         help='number of the k best images to use, used if aug-best-dict != None')
     parser.add_argument('--replacement-prob', type=float, default=0.0,

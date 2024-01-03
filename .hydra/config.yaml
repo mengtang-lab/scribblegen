@@ -1,12 +1,14 @@
 max_epochs: 200
 batch_size: 16
 learning_rate: 0.0001
-dataset: PascalScribble
+dataset: ADE20K_Block50
 split_path: null
 gpus:
+- 0
+- 1
 - 2
 - 3
-log_dir: ./logs/PascalScribble
+log_dir: ./logs/ADE20K_Block50
 accumulate_grad_batches: 1
 image_size:
 - 512
@@ -23,5 +25,5 @@ model_path: ./ControlNet/models/control_sd15_ini.ckpt
 model_config_path: ./ControlNet/models/cldm_v15.yaml
 resume_path: null
 resume_init_only: false
-logger_freq: 200
-save_freq: 100
+logger_freq: 500
+save_freq: 200
