@@ -59,7 +59,10 @@ class LightningTEL(pl.LightningModule):
     def configure_optimizers(self):
         return {
             "optimizer": self.optimizer,
-            "scheduler": self.scheduler,
+            "lr_scheduler": {
+                "scheduler": self.scheduler,
+                "interval": "step",
+            }
         }
     
     def training_step(self, batch, _):

@@ -73,6 +73,8 @@ if __name__ == "__main__":
                         help='comma separated list of epochs to switch between datasets (default: None)')
     parser.add_argument('--ssl_split', type=str, default=None, dest='data:ssl_split',
                         help='the SSL split to use (default: None / full dataset)')
+    parser.add_argument('--overfit', action='store_true', default=False, dest='data:overfit',
+                        help='whether to use exactly 10 images (default: False)')
 
     # ***********  Params for model.  **********
     parser.add_argument('--model_name', default=None, type=str,
@@ -150,8 +152,10 @@ if __name__ == "__main__":
     assert (configer.get('meta', 'save_epoch') is None) != (configer.get('meta', 'save_iters') is None), "Exactly one of save_epoch or save_iters must be set"
     assert (configer.get('meta', 'epochs') == -1) != (configer.get('solver', 'max_iters') == -1), "Exactly one of epochs or iters must be set"
 
-    train_ds = VOCSegmentation(configer, split='train')
-    val_ds = VOCSegmentation(configer, split='val')
+    print(configer.get('optim', 'optim_method'))
+
+    train_ds = VOCSegmentation(configer, split='train', overfit=configer.get('data', 'overfit'))
+    val_ds = VOCSegmentation(configer, split='val', overfit=configer.get('data', 'overfit'))
     train_dl = DataLoader(
         train_ds, 
         batch_size=configer.get('data', 'train_batch_size'),
@@ -168,6 +172,7 @@ if __name__ == "__main__":
     if configer.get('meta', 'epochs') != -1:
         num_iters = len(train_dl) * configer.get('meta', 'epochs') + 1
         configer.update(('solver', 'max_iters'), num_iters)
+        print(f"Num epochs: {configer.get('meta', 'epochs')}, Num iters: {configer.get('solver', 'max_iters')}")
 
     lit_tel_model = LightningTEL(configer)
 

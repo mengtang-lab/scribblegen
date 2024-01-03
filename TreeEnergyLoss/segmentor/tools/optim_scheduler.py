@@ -64,7 +64,7 @@ class OptimScheduler(object):
                 lambda_poly = lambda iters: pow((1.0 - iters / self.configer.get('solver', 'max_iters')), self.configer.get('lr', 'lambda_poly')['power'])
             else:
                 Log.info('Use lambda_poly policy with default power 0.9')
-                lambda_poly = lambda iters: pow((1.0 - iters / self.configer.get('solver', 'max_iters')), 0.9)
+                lambda_poly = lambda iters: pow((1.0 - (iters / self.configer.get('solver', 'max_iters'))), 0.9)
             scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_poly)
 
         elif policy == 'lambda_cosine':
