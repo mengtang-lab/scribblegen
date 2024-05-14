@@ -5,7 +5,7 @@ class Path(object):
             # folder that contains pascal/. It should have three subdirectories 
             # called "JPEGImages", "SegmentationClassAug", and "pascal_2012_scribble" 
             # containing RGB images, groundtruth, and scribbles respectively.
-            return '/mnt/data1/PascalVOC/'  
+            return '/path/to/datasets/PascalVOC/'  
         elif dataset == 'sbd':
             return '/path/to/datasets/benchmark_RELEASE/'  # folder that contains dataset/.
         elif dataset == 'cityscapes':
@@ -13,7 +13,7 @@ class Path(object):
         elif dataset == 'coco':
             return '/path/to/datasets/coco/'
         elif dataset == 'ade':
-            return '/mnt/data1/ADEChallengeData2016/'
+            return '/path/to/datasets/ADEChallengeData2016/'
         else:
             print('Dataset {} not available.'.format(dataset))
             raise NotImplementedError

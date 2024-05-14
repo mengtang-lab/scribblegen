@@ -11,7 +11,6 @@ from __future__ import print_function
 import os
 import math
 
-import torchcontrib
 from torch.optim import SGD, Adam, lr_scheduler
 
 from lib.utils.tools.logger import Logger as Log
@@ -82,28 +81,6 @@ class OptimScheduler(object):
                                                        cooldown=self.configer.get('lr', 'plateau')['cooldown'],
                                                        min_lr=self.configer.get('lr', 'plateau')['min_lr'],
                                                        eps=self.configer.get('lr', 'plateau')['eps'])
-
-        elif policy == 'swa_lambda_poly':
-            optimizer = torchcontrib.optim.SWA(optimizer)
-            normal_max_iters = int(self.configer.get('solver', 'max_iters') * 0.75)
-            swa_step_max_iters = (self.configer.get('solver', 'max_iters') - normal_max_iters) // 5 + 1     # we use 5 ensembles here
-            def swa_lambda_poly(iters):
-                if iters < normal_max_iters:
-                    return pow(1.0 - iters / normal_max_iters, 0.9)
-                else:                                   # set lr to half of initial lr and start swa
-                    return 0.5 * pow(1.0 - ((iters - normal_max_iters) % swa_step_max_iters) / swa_step_max_iters, 0.9)
-            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=swa_lambda_poly)
-
-        elif policy == 'swa_lambda_cosine':
-            optimizer = torchcontrib.optim.SWA(optimizer)
-            normal_max_iters = int(self.configer.get('solver', 'max_iters') * 0.75)
-            swa_step_max_iters = (self.configer.get('solver', 'max_iters') - normal_max_iters) // 5 + 1     # we use 5 ensembles here
-            def swa_lambda_cosine(iters):
-                if iters < normal_max_iters:
-                    return (math.cos(math.pi * iters / normal_max_iters) + 1.0) / 2
-                else:       # set lr to half of initial lr and start swa
-                    return 0.5 * (math.cos(math.pi * ((iters - normal_max_iters) % swa_step_max_iters) / swa_step_max_iters) + 1.0) / 2
-            scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=swa_lambda_cosine)
 
         else:
             Log.error('Policy:{} is not valid.'.format(policy))

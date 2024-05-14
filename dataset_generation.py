@@ -26,7 +26,7 @@ def main():
                         help='whether to add class hints to prompts')
     parser.add_argument('--one-hot', action='store_true', default=False,
                         help='whether to use onehot scribbles')
-    parser.add_argument('--guidance-scale', type=float, default=9.,
+    parser.add_argument('--guidance-scale', type=float, default=2.,
                         help='scale between unconditioned and conditioned model output')
     parser.add_argument('--num-steps', type=int, default=50,
                         help='number of inference steps')

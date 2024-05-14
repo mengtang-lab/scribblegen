@@ -12,55 +12,9 @@ from torch.utils.data import Dataset, DataLoader
 from utils import loadAde20K
 from config import DatasetEnum, ExpConfig
 
-class Old_ADE20KDataset(Dataset):
-    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False):
-        self.DATASET_PATH = '/mnt/ADE20K'
-        index_file = 'ADE20K_2021_17_01/index_ade20k.pkl'
-        with open('{}/{}'.format(self.DATASET_PATH, index_file), 'rb') as f:
-            self.index_ade20k = pkl.load(f)
-        split = 'train' if train else 'val'
-        self.indices = [
-            i for i in range(len(self.index_ade20k['filename'])) 
-            if split in self.index_ade20k['filename'][i]
-        ]
-        if overfit:
-            self.indices = self.indices[:10]
-        
-        self.size = size
-        self.default_prompt = "a high-quality, detailed, and professional image"
-
-    def __len__(self) -> int:
-        return len(self.indices)
-
-    def __getitem__(self, idx: int) -> Dict:
-        # Make idx go from index in the current dataset (i.e. restricted to train or val) to the
-        #   true index in the total dataset of ADE20K.
-        idx = self.indices[idx]
-
-        full_file_name = '{}/{}'.format(self.index_ade20k['folder'][idx], self.index_ade20k['filename'][idx])
-        info = loadAde20K('{}/{}'.format(self.DATASET_PATH, full_file_name))
-        target = cv2.imread(info['img_name'])[:,:,::-1]
-        source = cv2.imread(info['segm_name'])[:,:,::-1]
-
-        # Do not forget that OpenCV read images in BGR order.
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
-
-        # Resize
-        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
-        target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
-
-        # Normalize source images to [0, 1].
-        source = source.astype(np.float32) / 255.0
-
-        # Normalize target images to [-1, 1].
-        target = (target.astype(np.float32) / 127.5) - 1.0
-
-        return dict(jpg=target, txt=self.default_prompt, hint=source)
-
 class ADE20KDataset(Dataset):
     def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False, class_hint: bool = False, labels: str = "annotations/training"):
-        self.DATASET_PATH = '/mnt/data1/ADEChallengeData2016/'
+        self.DATASET_PATH = '/path/to/datasets/ADEChallengeData2016/'
         self.image_dir = os.path.join(self.DATASET_PATH, 'images', 'training' if train else 'validation')
         self.annotation_dir = os.path.join(self.DATASET_PATH, labels)
         self.class_dir = os.path.join(self.DATASET_PATH, "classes")
@@ -114,7 +68,7 @@ class PascalSegmentationDataset(Dataset):
             overfit: bool = False, # Whether to limit the dataset to 10 images
             class_hint: bool = False, # Whether to include class names in the CLIP prompt
         ):
-        self.DATASET_PATH = '/mnt/data1/PascalVOC'
+        self.DATASET_PATH = '/path/to/datasets/PascalVOC'
         
         with open(f"{self.DATASET_PATH}/{'train.txt' if train else 'val.txt'}", 'r') as f:
             self.image_names = f.readlines()
@@ -176,7 +130,7 @@ class PascalScribbleDataset(Dataset):
             split_path: Optional[str] = None, # Path to the SSL split
             one_hot_labels: bool = False, # Whether to use one-hot labels instead of RGB for hints
         ):
-        self.DATASET_PATH = '/mnt/data1/PascalVOC'
+        self.DATASET_PATH = '/path/to/datasets/PascalVOC'
         
         with open(os.path.join(self.DATASET_PATH, 'train.txt' if train else 'val.txt'), 'r') as f:
             self.image_names = f.readlines()
