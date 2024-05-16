@@ -29,9 +29,10 @@ conda install --file requirements.txt
 ```
 You may need to install `opencv-python` and `opencv-contrib-python` via pip.
 
-# Dataset
+# Train ScribbleGen
 
-To download the PascalScribble dataset used in our paper, run
+Prior to training, download Pascal dataset with scribbles,
+
 ```
 cd ./data/pascal_scribble/
 sh fetchPascalScribble.sh
@@ -40,21 +41,23 @@ sh fetchVOC2012.sh
 ```
 You will need to update the paths in `rloss/pytorch/pytorch-deeplab_v3_plus/mypath.py` and `data.py`.
 
-# Train ControlNet
-
-The ControlNet image synthesizer can be trained on Pascal scribbles using the following command:
+Then, the ControlNet image synthesizer can be trained on Pascal scribbles using the following command:
 ```
 python train.py --config control_PascalScribble
 ```
 
-# Training Data Synthesis
+# Inference with ScribbleGen
 
-Training data can be synthesized once the ControlNet model has been trained by
+Once the ScribbleGen model has been trained, scribble-conditioned synthetic images can be obtained by
 ```
 python dataset_generation.py --checkpoint /path/to/controlnet.ckpt --out-dir data/pascal_scribble/JPEGImages_synthetic/scribble_synthetic/ --gpu-id 0 
 ```
 
-# Training RLoss
+Synthetic images generated with different encode ratios from 0.1 to 1.0 are released.
+
+https://ucmerced.box.com/s/2qzwg9qmo8b03wj9y7ulh57io5am5exj
+
+# Training weakly-supervised segmentation network, e.g., RLoss, using augmented dataset
 
 An RLoss model can be trained using the following command:
 ```
