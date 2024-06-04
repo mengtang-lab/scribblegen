@@ -3,16 +3,7 @@
 
 [arXiv](https://arxiv.org/abs/2311.17121) [Openreview](https://openreview.net/forum?id=0lJq8pmlXM)
 
-```
-@article{scribblegen,
-      title={ScribbleGen: Generative Data Augmentation Improves Scribble-supervised Semantic Segmentation}, 
-      author={Jacob Schnell and Jieke Wang and Lu Qi and Vincent Tao Hu and Meng Tang},
-      year={2024},
-      eprint={2311.17121},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
-}
-```
+![ScribbleGen](/scribblegen.png)
 
 # Structure
 Our codebase is comprised of three other codebases. Namely, our diffusion model based image synthesizer is built using [ControlNet](https://github.com/lllyasviel/ControlNet), our main method for training weakly supervised segmentation models is using [RLoss](https://github.com/mengtang-cv/rloss/tree/master), and our secondary method for training weakly supervised segmentation models is using [TreeEnergyLoss](https://github.com/megvii-research/TreeEnergyLoss). We include all the files required from each library in our codebase, but some files may be modified or removed.
@@ -63,4 +54,15 @@ An RLoss model can be trained using the following command:
 ```
 cd rloss/pytorch/pytorch-deeplab_v3_plus
 python train_withdensecrfloss.py --backbone resnet --lr 0.003 --workers 6 --epochs 60 --scribbles --batch-size 12  --checkname deeplab-resnet --eval-interval 2 --dataset pascal --save-interval 10 --densecrfloss 2e-9 --rloss-scale 0.5 --sigma-rgb 15 --sigma-xy 100 --aug-scheme append --aug-datasets synthetic --gpu-ids 1
+```
+
+```
+@article{scribblegen,
+      title={ScribbleGen: Generative Data Augmentation Improves Scribble-supervised Semantic Segmentation}, 
+      author={Jacob Schnell and Jieke Wang and Lu Qi and Vincent Tao Hu and Meng Tang},
+      year={2024},
+      eprint={2311.17121},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
 ```
