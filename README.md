@@ -1,7 +1,7 @@
 # ScribbleGen: Generative Data Augmentation Improves Scribble-supervised Semantic Segmentation (CVPR2024 SyntaGen Workshop)
 [Jacob Schnell](https://student.cs.uwaterloo.ca/~jschnell/), [Jieke Wang](), [Lu Qi](http://luqi.info/), [Vincent Tao Hu](https://taohu.me/), [Meng Tang](http://mengtang.org)
 
-[arXiv](https://arxiv.org/abs/2311.17121) [Openreview](https://openreview.net/forum?id=0lJq8pmlXM)
+[PDF](http://mengtang.org/scribblegen_cvprw2024.pdf)
 
 ![ScribbleGen](/scribblegen.png)
 
@@ -57,12 +57,10 @@ python train_withdensecrfloss.py --backbone resnet --lr 0.003 --workers 6 --epoc
 ```
 
 ```
-@article{scribblegen,
+@inproceedings{scribblegen,
       title={ScribbleGen: Generative Data Augmentation Improves Scribble-supervised Semantic Segmentation}, 
       author={Jacob Schnell and Jieke Wang and Lu Qi and Vincent Tao Hu and Meng Tang},
       year={2024},
-      eprint={2311.17121},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+      booktitle={CVPR Workshop}
 }
 ```
