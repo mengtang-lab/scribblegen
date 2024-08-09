@@ -9,55 +9,7 @@ import torch
 import matplotlib.pyplot as plt
 
 from torch.utils.data import Dataset, DataLoader
-from utils import loadAde20K
 from config import DatasetEnum, ExpConfig
-
-class ADE20KDataset(Dataset):
-    def __init__(self, size: Tuple[int, int] = (512, 512), train: bool = True, overfit: bool = False, class_hint: bool = False, labels: str = "annotations/training"):
-        self.DATASET_PATH = '/path/to/datasets/ADEChallengeData2016/'
-        self.image_dir = os.path.join(self.DATASET_PATH, 'images', 'training' if train else 'validation')
-        self.annotation_dir = os.path.join(self.DATASET_PATH, labels)
-        self.class_dir = os.path.join(self.DATASET_PATH, "classes")
-
-        self.ids = os.listdir(self.image_dir)
-        self.ids = list(map(lambda x: x.split('.')[0], self.ids))
-        if overfit:
-            self.ids = self.ids[:100]
-
-        self.size = size
-        self.default_prompt = "a high-quality, detailed, and professional image"
-        self.class_hint = class_hint
-
-    def __len__(self) -> int:
-        return len(self.ids)
-
-    def __getitem__(self, idx: int) -> Dict:
-        source_path = os.path.join(self.annotation_dir, f"{self.ids[idx]}.png")
-        target_path = os.path.join(self.image_dir, f"{self.ids[idx]}.jpg")
-
-        source = cv2.imread(source_path)
-        target = cv2.imread(target_path)
-
-        # Do not forget that OpenCV read images in BGR order.
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
-
-        # Resize
-        source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
-        target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
-
-        # Normalize source images to [0, 1].
-        source = source.astype(np.float32) / 255.0
-        # Normalize target images to [-1, 1].
-        target = (target.astype(np.float32) / 127.5) - 1.0
-
-        prompt = self.default_prompt
-        if self.class_hint:
-            with open(os.path.join(self.class_dir, f"{self.ids[idx]}.txt"), 'r') as f:
-                classes = f.read()
-            prompt += " of " + classes
-
-        return dict(jpg=target, txt=prompt, hint=source, name=self.ids[idx])
 
 
 class PascalSegmentationDataset(Dataset):
