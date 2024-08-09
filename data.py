@@ -149,27 +149,8 @@ class PascalScribbleDataset(Dataset):
 def get_dataloaders(config: ExpConfig) -> Tuple[DataLoader, DataLoader]:
     train_ds: Dataset
     val_ds: Dataset
-    if config.dataset.value == DatasetEnum.ADE20K.value:
-        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
-        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
-        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
-    
-    if config.dataset.value == DatasetEnum.ADE20K_Block10.value:
-        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit, labels="ade20k_blocks_colored/block10", class_hint=config.class_hint)
-        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
-        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
 
-    if config.dataset.value == DatasetEnum.ADE20K_Block20.value:
-        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit, labels="ade20k_blocks_colored/block20", class_hint=config.class_hint)
-        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
-        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
-
-    if config.dataset.value == DatasetEnum.ADE20K_Block50.value:
-        train_ds = ADE20KDataset(size=tuple(config.image_size), train=True, overfit=config.overfit, labels="ade20k_blocks_colored/block50", class_hint=config.class_hint)
-        val_ds = ADE20KDataset(size=tuple(config.image_size), train=False, overfit=config.overfit, labels="annotations/validation")
-        assert len(train_ds) + len(val_ds) == 22210 or config.overfit
-
-    elif config.dataset.value == DatasetEnum.PascalSegmentation.value:
+    if config.dataset.value == DatasetEnum.PascalSegmentation.value:
         train_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=True, overfit=config.overfit)
         val_ds = PascalSegmentationDataset(size=tuple(config.image_size), train=False, overfit=config.overfit)
         assert len(train_ds) + len(val_ds) == 12031 or config.overfit
