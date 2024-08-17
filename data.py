@@ -48,8 +48,8 @@ class PascalSegmentationDataset(Dataset):
         target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpg"
         source_path = f"{self.DATASET_PATH}/SegmentationClassAug/{file_name}.png"
 
-        target = cv2.imread(target_path)[:,:,::-1]
-        source = cv2.imread(source_path)[:,:,::-1]
+        target = cv2.imread(target_path)
+        source = cv2.imread(source_path)
 
         # Do not forget that OpenCV read images in BGR order.
         source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
@@ -119,7 +119,7 @@ class PascalScribbleDataset(Dataset):
         file_name = self.image_names[idx]
         target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpeg"
 
-        target = cv2.imread(target_path)[:,:,::-1]
+        target = cv2.imread(target_path)
         target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
         target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
         target = (target.astype(np.float32) / 127.5) - 1.0
