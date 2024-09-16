@@ -51,9 +51,8 @@ class PascalSegmentationDataset(Dataset):
         target = cv2.imread(target_path)
         source = cv2.imread(source_path)
 
-        # Do not forget that OpenCV read images in BGR order.
-        source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
-        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+        # source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+        # target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
 
         # Resize
         source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
@@ -120,7 +119,7 @@ class PascalScribbleDataset(Dataset):
         target_path = f"{self.DATASET_PATH}/JPEGImages/{file_name}.jpeg"
 
         target = cv2.imread(target_path)
-        target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
+        # target = cv2.cvtColor(target, cv2.COLOR_BGR2RGB)
         target = cv2.resize(target, dsize=self.size, interpolation=cv2.INTER_CUBIC)
         target = (target.astype(np.float32) / 127.5) - 1.0
 
@@ -134,8 +133,8 @@ class PascalScribbleDataset(Dataset):
             source = torch.nn.functional.one_hot(source, num_classes=22).float()
         else:
             source_path = f"{self.DATASET_PATH}/pascal_2012_scribble_color_coded/{file_name}.png"
-            source = cv2.imread(source_path)[:,:,::-1]
-            source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
+            source = cv2.imread(source_path)
+            # source = cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
             source = cv2.resize(source, dsize=self.size, interpolation=cv2.INTER_CUBIC)
             source = source.astype(np.float32) / 255.0
 
