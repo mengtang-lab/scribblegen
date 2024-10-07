@@ -1,13 +1,13 @@
 import argparse
 import sys
 import torch
-from data import PascalSegmentationDataset, PascalScribbleDataset, ADE20KDataset
+from data import PascalSegmentationDataset, PascalScribbleDataset
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from tqdm import tqdm
 
-sys.path.append('/home/jacob/scribblegen/ControlNet')
+sys.path.append('./ControlNet')
 from ControlNet.cldm.model import create_model, load_state_dict
 
 def main():
@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--gpu-id', type=int, default=0,
                         help='which gpu to use for inference')
     parser.add_argument('--dataset', type=str, default='PascalScribble',
-                        choices=['ADE20K', 'ADE20K_Block50', 'PascalSegmentation', 'PascalScribble'],
+                        choices=['PascalSegmentation', 'PascalScribble'],
                         help='dataset to run inference on')
     parser.add_argument('--add-hint', action='store_true', default=False,
                         help='whether to add class hints to prompts')
