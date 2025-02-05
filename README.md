@@ -6,7 +6,7 @@
 ![ScribbleGen](/scribblegen.png)
 
 # Structure
-Our codebase is comprised of three other codebases. Namely, our diffusion model based image synthesizer is built using [ControlNet](https://github.com/lllyasviel/ControlNet), our main method for training weakly supervised segmentation models is using [RLoss](https://github.com/mengtang-cv/rloss/tree/master), and our secondary method for training weakly supervised segmentation models is using [TreeEnergyLoss](https://github.com/megvii-research/TreeEnergyLoss). We include all the files required from each library in our codebase, but some files may be modified or removed.
+Our codebase is comprised of three other codebases. Namely, our diffusion model based image synthesizer is built using [ControlNet](https://github.com/lllyasviel/ControlNet), our main method for training weakly supervised segmentation models is using [RLoss](https://github.com/mengtang-cv/rloss/tree/master), and our secondary method for training weakly supervised segmentation models is using [AGMM](https://github.com/Luffy03/AGMM-SASS). We include all the files required from each library in our codebase, but some files may be modified or removed.
 
 # Environments
 
